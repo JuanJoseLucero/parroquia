@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence
+                                 https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+    <persistence-unit name="MAUXPU" transaction-type="JTA">
+        <jta-data-source>java:jboss/datasources/MA</jta-data-source>
+
+        <class>com.mariaauxiliadora.eventos.entity.Persona</class>
+        <class>com.mariaauxiliadora.eventos.entity.Usuario</class>
+        <class>com.mariaauxiliadora.eventos.entity.Guia</class>
+        <class>com.mariaauxiliadora.eventos.entity.Grupo</class>
+        <class>com.mariaauxiliadora.eventos.entity.GrupoGuia</class>
+        <class>com.mariaauxiliadora.eventos.entity.Representante</class>
+        <class>com.mariaauxiliadora.eventos.entity.EstadoInscripcion</class>
+        <class>com.mariaauxiliadora.eventos.entity.Ninio</class>
+        <class>com.mariaauxiliadora.eventos.entity.InscripcionCabecera</class>
+        <class>com.mariaauxiliadora.eventos.entity.InscripcionDetalle</class>
+        <class>com.mariaauxiliadora.eventos.entity.Evento</class>
+        <class>com.mariaauxiliadora.eventos.entity.FechaCalendario</class>
+        <class>com.mariaauxiliadora.eventos.entity.EstadoAsistencia</class>
+        <class>com.mariaauxiliadora.eventos.entity.MetodoPago</class>
+        <class>com.mariaauxiliadora.eventos.entity.Asistencia</class>
+        <class>com.mariaauxiliadora.eventos.entity.CostoInscripcion</class>
+        <class>com.mariaauxiliadora.eventos.entity.Pago</class>
+        <class>com.mariaauxiliadora.eventos.entity.Taller</class>
+        <class>com.mariaauxiliadora.eventos.entity.FichaSociodemografica</class>
+
+        <properties>
+            <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.format_sql" value="true"/>
+        </properties>
+    </persistence-unit>
+</persistence>

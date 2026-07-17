@@ -1,0 +1,12 @@
+node_modules/
+dist/
+target/
+*.zip
+*.log
+.DS_Store
+.classpath
+.project
+.settings/
+*.iml
+.idea/
+maux-backend/.env
