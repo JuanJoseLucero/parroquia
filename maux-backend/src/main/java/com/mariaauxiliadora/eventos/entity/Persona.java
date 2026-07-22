@@ -36,6 +36,9 @@ public class Persona implements Serializable {
     @Column(name = "anios_cumplidos")
     private Integer aniosCumplidos;
 
+    @Column(name = "estado_civil", length = 30)
+    private String estadoCivil;
+
     @Column(nullable = false)
     private Boolean activo = true;
 
@@ -69,4 +72,7 @@ public class Persona implements Serializable {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+
+    public String getEstadoCivil() { return estadoCivil; }
+    public void setEstadoCivil(String estadoCivil) { this.estadoCivil = estadoCivil; }
 }

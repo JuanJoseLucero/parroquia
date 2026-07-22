@@ -20,6 +20,9 @@ public class InscripcionDetalle implements Serializable {
     @Column(name = "cestadoinscripcion")
     private Integer cestadoinscripcion;
 
+    @Column(name = "cnivelcatequesis")
+    private Integer cnivelcatequesis;
+
     @Column(nullable = false)
     private Boolean activo = true;
 
@@ -38,4 +41,7 @@ public class InscripcionDetalle implements Serializable {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+
+    public Integer getCnivelcatequesis() { return cnivelcatequesis; }
+    public void setCnivelcatequesis(Integer cnivelcatequesis) { this.cnivelcatequesis = cnivelcatequesis; }
 }

@@ -4,21 +4,18 @@ import jakarta.persistence.*;
 import java.io.Serializable;
 
 @Entity
-@Table(schema = "eventos", name = "trepresentante")
-public class Representante implements Serializable {
+@Table(schema = "eventos", name = "tpadre")
+public class Padre implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "cpersona")
+    @Column(name = "cpersona", nullable = false)
     private Integer cpersona;
 
-    @Column(name = "contacto_emergencia_nombre", length = 100)
-    private String contactoEmergenciaNombre;
-
-    @Column(name = "contacto_emergencia_telefono", length = 20)
-    private String contactoEmergenciaTelefono;
+    @Column(name = "tipo_padre", nullable = false, length = 10)
+    private String tipoPadre;
 
     @Column(name = "ocupacion", length = 100)
     private String ocupacion;
@@ -29,25 +26,23 @@ public class Representante implements Serializable {
     @Column(nullable = false)
     private Boolean activo = true;
 
-    public Representante() {}
+    public Padre() {}
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
+
     public Integer getCpersona() { return cpersona; }
     public void setCpersona(Integer cpersona) { this.cpersona = cpersona; }
 
-    public String getContactoEmergenciaNombre() { return contactoEmergenciaNombre; }
-    public void setContactoEmergenciaNombre(String contactoEmergenciaNombre) { this.contactoEmergenciaNombre = contactoEmergenciaNombre; }
-
-    public String getContactoEmergenciaTelefono() { return contactoEmergenciaTelefono; }
-    public void setContactoEmergenciaTelefono(String contactoEmergenciaTelefono) { this.contactoEmergenciaTelefono = contactoEmergenciaTelefono; }
-
-    public Boolean getActivo() { return activo; }
-    public void setActivo(Boolean activo) { this.activo = activo; }
+    public String getTipoPadre() { return tipoPadre; }
+    public void setTipoPadre(String tipoPadre) { this.tipoPadre = tipoPadre; }
 
     public String getOcupacion() { return ocupacion; }
     public void setOcupacion(String ocupacion) { this.ocupacion = ocupacion; }
 
     public String getLugarTrabajo() { return lugarTrabajo; }
     public void setLugarTrabajo(String lugarTrabajo) { this.lugarTrabajo = lugarTrabajo; }
+
+    public Boolean getActivo() { return activo; }
+    public void setActivo(Boolean activo) { this.activo = activo; }
 }

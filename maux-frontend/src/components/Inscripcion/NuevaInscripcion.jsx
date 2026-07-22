@@ -34,8 +34,14 @@ function getRangoEdad(edad) {
 }
 
 const STEPS = ['Representante', 'Niños'];
-const emptyNino = { cedula: '', nombres: '', apellidos: '', fechaNacimiento: '', sexo: '', alergias: '', condicionesMedicas: '', ctaller: '', ctaller2: '' };
+const emptyNino = {
+    cedula: '', nombres: '', apellidos: '', fechaNacimiento: '', sexo: '', alergias: '', condicionesMedicas: '', ctaller: '', ctaller2: '',
+    bautizado: '', bautizadoFecha: '', bautizadoParroquia: '',
+    eucaristia: '', eucaristiaFecha: '', eucaristiaParroquia: '',
+    nivelCatequesis: '', turno: ''
+};
 const emptyFicha = { sectorResidencia: '', tipoInstitucion: '', institucionEducativa: '', nivelEducativo: '', comoConocio: '', comoConocioOtro: '' };
+const emptyPadre = { nombre: '', ocupacion: '', lugarTrabajo: '', telefono: '' };
 
 const maskText = (text) => {
     if (!text || text.length <= 2) return text || '';
@@ -49,13 +55,21 @@ export default function NuevaInscripcion() {
     const [success, setSuccess] = useState(null);
     const [error, setError] = useState(null);
 
-    const [rep, setRep] = useState({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', contactoEmergenciaNombre: '', contactoEmergenciaTelefono: '' });
+    const [rep, setRep] = useState({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', contactoEmergenciaNombre: '', contactoEmergenciaTelefono: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
     const [ninos, setNinos] = useState([{ ...emptyNino }]);
     const [fichas, setFichas] = useState([{ ...emptyFicha }]);
     const [talleresDeportivos, setTalleresDeportivos] = useState([]);
     const [talleresAulicos, setTalleresAulicos] = useState([]);
+    const [nivelesCatequesis, setNivelesCatequesis] = useState([]);
+    const [turnos, setTurnos] = useState([]);
+    const [padres, setPadres] = useState([{ ...emptyPadre }, { ...emptyPadre }]);
+    const [showPadres, setShowPadres] = useState(false);
     const handleFichaChange = (index, field, value) => {
         setFichas(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
+    };
+
+    const handlePadreChange = (index, field, value) => {
+        setPadres(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
     };
 
     const [repEncontrado, setRepEncontrado] = useState(false);
@@ -69,6 +83,14 @@ export default function NuevaInscripcion() {
       useEffect(() => {
         post("/talleres/por-tipo", { tipo: "aulico"}).then(setTalleresAulicos).catch(() => {});
       }, []);
+
+    useEffect(() => {
+        post("/niveles-catequesis/listar", { page: 0, size: 100 }).then(res => setNivelesCatequesis(res.data || [])).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        post("/turnos/listar", { page: 0, size: 100 }).then(res => setTurnos(res.data || [])).catch(() => {});
+    }, []);
 
     const handleRepChange = (e) => {
         if (e.target.name === 'cedula') setRepEncontrado(false);
@@ -168,6 +190,9 @@ export default function NuevaInscripcion() {
                     contactoEmergenciaNombre: rep.contactoEmergenciaNombre
                         ? rep.contactoEmergenciaNombre.toUpperCase() : null,
                     contactoEmergenciaTelefono: rep.contactoEmergenciaTelefono || null,
+                    estadoCivil: rep.estadoCivil || null,
+                    ocupacion: rep.ocupacion ? rep.ocupacion.toUpperCase() : null,
+                    lugarTrabajo: rep.lugarTrabajo ? rep.lugarTrabajo.toUpperCase() : null,
                 },
                 ninos: ninos.map(n => ({
                     cedula: n.cedula,
@@ -179,6 +204,21 @@ export default function NuevaInscripcion() {
                     condicionesMedicas: n.condicionesMedicas ? n.condicionesMedicas.toUpperCase() : null,
                     ctaller: n.ctaller ? Number(n.ctaller) : null,
                     ctaller2: n.ctaller2 ? Number(n.ctaller2) : null,
+                    bautizado: n.bautizado === 'true',
+                    bautizadoFecha: n.bautizadoFecha || null,
+                    bautizadoParroquia: n.bautizadoParroquia ? n.bautizadoParroquia.toUpperCase() : null,
+                    eucaristia: n.eucaristia === 'true',
+                    eucaristiaFecha: n.eucaristiaFecha || null,
+                    eucaristiaParroquia: n.eucaristiaParroquia ? n.eucaristiaParroquia.toUpperCase() : null,
+                    nivelCatequesis: n.nivelCatequesis ? Number(n.nivelCatequesis) : null,
+                    turno: n.turno ? Number(n.turno) : null,
+                })),
+                padres: padres.filter(p => p.nombre.trim() !== '').map((p, i) => ({
+                    tipoPadre: i === 0 ? 'padre' : 'madre',
+                    nombre: p.nombre.toUpperCase(),
+                    ocupacion: p.ocupacion ? p.ocupacion.toUpperCase() : null,
+                    lugarTrabajo: p.lugarTrabajo ? p.lugarTrabajo.toUpperCase() : null,
+                    telefono: p.telefono || null,
                 })),
                 fichas: fichas.map(f => ({
                     sectorResidencia: f.sectorResidencia ? f.sectorResidencia.toUpperCase() : null,
@@ -197,12 +237,14 @@ export default function NuevaInscripcion() {
                 nombres: result.detalles.map(d => d.nombre),
             });
             setStep(0);
-            setRep({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', contactoEmergenciaNombre: '', contactoEmergenciaTelefono: '' });
+            setRep({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', contactoEmergenciaNombre: '', contactoEmergenciaTelefono: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
             setNinos([{ ...emptyNino }]);
             setFichas([{ ...emptyFicha }]);
+            setPadres([{ ...emptyPadre }, { ...emptyPadre }]);
             setRepEncontrado(false);
             setConsultandoCedula(false);
             setNinosDuplicados({});
+            setShowPadres(false);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -320,6 +362,22 @@ export default function NuevaInscripcion() {
                                             <Input label="Sector" name="direccion" value={rep.direccion} onChange={handleRepChange} />
                                             <Input label="Email" name="email" type="email" value={rep.email} onChange={handleRepChange} />
                                             <Input label="Celular" name="celular" value={rep.celular} onChange={handleRepChange} />
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-600 mb-1">Estado Civil</label>
+                                                <select name="estadoCivil" value={rep.estadoCivil} onChange={handleRepChange}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                                    <option value="">Seleccione</option>
+                                                    <option value="Casados Civil">Casados Civil</option>
+                                                    <option value="Casados Eclesiastico">Casados Eclesiástico</option>
+                                                    <option value="Union Libre">Unión Libre</option>
+                                                    <option value="Divorciado">Divorciado</option>
+                                                    <option value="Viudo">Viudo</option>
+                                                    <option value="Soltero">Soltero</option>
+                                                    <option value="Otro">Otro</option>
+                                                </select>
+                                            </div>
+                                            <Input label="Ocupación" name="ocupacion" value={rep.ocupacion} onChange={handleRepChange} />
+                                            <Input label="Lugar de Trabajo" name="lugarTrabajo" value={rep.lugarTrabajo} onChange={handleRepChange} />
                                         </>
                                     )}
                                 </div>
@@ -329,6 +387,30 @@ export default function NuevaInscripcion() {
                                         <Input label="Nombre" name="contactoEmergenciaNombre" value={rep.contactoEmergenciaNombre} onChange={handleRepChange} />
                                         <Input label="Teléfono" name="contactoEmergenciaTelefono" value={rep.contactoEmergenciaTelefono} onChange={handleRepChange} />
                                     </div>
+                                </div>
+                                <div className="border-t border-gray-100 pt-4">
+                                    <button type="button" onClick={() => setShowPadres(!showPadres)}
+                                        className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors">
+                                        <svg className={`h-4 w-4 transition-transform ${showPadres ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                        Datos del Padre y la Madre
+                                    </button>
+                                    {showPadres && (
+                                        <div className="mt-3 space-y-3">
+                                            {['Padre', 'Madre'].map((label, i) => (
+                                                <div key={i} className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                                                    <span className="text-xs font-semibold text-gray-600 mb-2 block">{label}</span>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <Input label="Nombre" value={padres[i]?.nombre || ''} onChange={(e) => handlePadreChange(i, 'nombre', e.target.value)} />
+                                                        <Input label="Ocupación" value={padres[i]?.ocupacion || ''} onChange={(e) => handlePadreChange(i, 'ocupacion', e.target.value)} />
+                                                        <Input label="Lugar de Trabajo" value={padres[i]?.lugarTrabajo || ''} onChange={(e) => handlePadreChange(i, 'lugarTrabajo', e.target.value)} />
+                                                        <Input label="Teléfono" value={padres[i]?.telefono || ''} onChange={(e) => handlePadreChange(i, 'telefono', e.target.value)} />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -424,6 +506,66 @@ export default function NuevaInscripcion() {
                                                 </div>
                                             </div>
                                             <div className="col-span-2 border-t border-gray-200 pt-3 mt-2">
+                                                <h5 className="text-xs font-semibold text-gray-600 mb-2">Sacramentos</h5>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Bautizado</label>
+                                                        <select name="bautizado" value={nino.bautizado} onChange={(e) => handleNinoChange(idx, e)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                                            <option value="">Seleccione</option>
+                                                            <option value="true">Sí</option>
+                                                            <option value="false">No</option>
+                                                        </select>
+                                                    </div>
+                                                    {nino.bautizado === 'true' && (
+                                                        <>
+                                                            <Input label="Fecha Bautismo" name="bautizadoFecha" type="date" value={nino.bautizadoFecha} onChange={(e) => handleNinoChange(idx, e)} />
+                                                            <Input label="Parroquia Bautismo" name="bautizadoParroquia" value={nino.bautizadoParroquia} onChange={(e) => handleNinoChange(idx, e)} />
+                                                        </>
+                                                    )}
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Primera Comunión</label>
+                                                        <select name="eucaristia" value={nino.eucaristia} onChange={(e) => handleNinoChange(idx, e)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                                            <option value="">Seleccione</option>
+                                                            <option value="true">Sí</option>
+                                                            <option value="false">No</option>
+                                                        </select>
+                                                    </div>
+                                                    {nino.eucaristia === 'true' && (
+                                                        <>
+                                                            <Input label="Fecha Comunión" name="eucaristiaFecha" type="date" value={nino.eucaristiaFecha} onChange={(e) => handleNinoChange(idx, e)} />
+                                                            <Input label="Parroquia Comunión" name="eucaristiaParroquia" value={nino.eucaristiaParroquia} onChange={(e) => handleNinoChange(idx, e)} />
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="col-span-2 border-t border-gray-200 pt-3 mt-2">
+                                                <h5 className="text-xs font-semibold text-gray-600 mb-2">Catequesis</h5>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Nivel de Catequesis</label>
+                                                        <select name="nivelCatequesis" value={nino.nivelCatequesis} onChange={(e) => handleNinoChange(idx, e)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                                            <option value="">Seleccione</option>
+                                                            {nivelesCatequesis.map((nc) => (
+                                                                <option key={nc.id} value={nc.id}>{nc.nombre}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Turno</label>
+                                                        <select name="turno" value={nino.turno} onChange={(e) => handleNinoChange(idx, e)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                                            <option value="">Seleccione</option>
+                                                            {turnos.map((t) => (
+                                                                <option key={t.id} value={t.id}>{t.nombre}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="col-span-2 border-t border-gray-200 pt-3 mt-2">
                                                 <h5 className="text-xs font-semibold text-gray-600 mb-2">Ficha Sociodemográfica del Niño</h5>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <Input label="Sector de Residencia" name="sectorResidencia" value={fichas[idx]?.sectorResidencia || ''}
@@ -504,16 +646,23 @@ export default function NuevaInscripcion() {
                                     {rep.contactoEmergenciaNombre && (
                                         <p className="text-xs text-blue-700"><strong>Contacto emergencia:</strong> {rep.contactoEmergenciaNombre} — {rep.contactoEmergenciaTelefono}</p>
                                     )}
+                                    {padres.some(p => p.nombre.trim()) && (
+                                        <p className="text-xs text-blue-700 mt-1"><strong>Padres:</strong> {padres.filter(p => p.nombre.trim()).map(p => p.nombre).join(' / ')}</p>
+                                    )}
                                     <p className="text-xs text-blue-700 mt-1"><strong>Niños:</strong></p>
                                     <ul className="list-disc list-inside text-xs text-blue-700 ml-2">
                                         {ninos.map((n, i) => {
-                                            const t1 = n.ctaller ? talleres.find(t => t.id === Number(n.ctaller)) : null;
-                                            const t2 = n.ctaller2 ? talleres.find(t => t.id === Number(n.ctaller2)) : null;
+                                            const t1 = n.ctaller ? talleresDeportivos.find(t => t.id === Number(n.ctaller)) : null;
+                                            const t2 = n.ctaller2 ? talleresAulicos.find(t => t.id === Number(n.ctaller2)) : null;
+                                            const nc = n.nivelCatequesis ? nivelesCatequesis.find(nc => nc.id === Number(n.nivelCatequesis)) : null;
+                                            const tg = n.turno ? turnos.find(t => t.id === Number(n.turno)) : null;
                                             return (
                                             <li key={i}>
                                                 {n.nombres} {n.apellidos} — CI: {n.cedula || '—'}
-                                                {n.sexo ? ` — ${n.sexo === 'M' ? 'Masculino' : 'Femenino'}` : ''}
+                                                {n.sexo ? ` — ${n.sexo === 'M' ? 'Masculino' : 'Femenino}` : ''}
                                                 {t1 ? ` — ${t1.siglas}` : ''}{t2 ? ` + ${t2.siglas}` : ''}
+                                                {nc ? ` — ${nc.nombre}` : ''}
+                                                {tg ? ` (${tg.nombre})` : ''}
                                             </li>
                                         );})}
                                     </ul>

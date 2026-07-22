@@ -44,9 +44,19 @@ const emptyNino = {
   condicionesMedicas: "",
   ctaller: "",
   ctaller2: "",
+  bautizado: "",
+  bautizadoFecha: "",
+  bautizadoParroquia: "",
+  eucaristia: "",
+  eucaristiaFecha: "",
+  eucaristiaParroquia: "",
+  nivelCatequesis: "",
+  turno: "",
 };
 
 const emptyFicha = { sectorResidencia: "", tipoInstitucion: "", institucionEducativa: "", nivelEducativo: "", comoConocio: "", comoConocioOtro: "" };
+
+const emptyPadre = { nombre: "", ocupacion: "", lugarTrabajo: "", telefono: "" };
 
 export default function InscripcionPublica() {
   const navigate = useNavigate();
@@ -60,6 +70,9 @@ export default function InscripcionPublica() {
     celular: "",
     contactoEmergenciaNombre: "",
     contactoEmergenciaTelefono: "",
+    estadoCivil: "",
+    ocupacion: "",
+    lugarTrabajo: "",
   });
   const [ninos, setNinos] = useState([{ ...emptyNino }]);
   const [fichas, setFichas] = useState([{ ...emptyFicha }]);
@@ -70,6 +83,15 @@ export default function InscripcionPublica() {
   const [error, setError] = useState(null);
   const handleFichaChange = (index, field, value) => {
     setFichas(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
+  };
+
+  const [padres, setPadres] = useState([{ ...emptyPadre }, { ...emptyPadre }]);
+  const [showPadres, setShowPadres] = useState(false);
+  const [nivelesCatequesis, setNivelesCatequesis] = useState([]);
+  const [turnos, setTurnos] = useState([]);
+
+  const handlePadreChange = (index, field, value) => {
+    setPadres(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
   };
 
   const [repEncontrado, setRepEncontrado] = useState(false);
@@ -85,6 +107,14 @@ export default function InscripcionPublica() {
 
   useEffect(() => {
     post("/talleres/por-tipo", { tipo: "aulico"}).then(setTalleresAulicos).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    post("/niveles-catequesis/listar", { page: 0, size: 100 }).then(res => setNivelesCatequesis(res.data || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    post("/turnos/listar", { page: 0, size: 100 }).then(res => setTurnos(res.data || [])).catch(() => {});
   }, []);
 
   const handleRepChange = (e) =>
@@ -219,6 +249,9 @@ export default function InscripcionPublica() {
             ? rep.contactoEmergenciaNombre.toUpperCase()
             : null,
           contactoEmergenciaTelefono: rep.contactoEmergenciaTelefono || null,
+          estadoCivil: rep.estadoCivil || null,
+          ocupacion: rep.ocupacion ? rep.ocupacion.toUpperCase() : null,
+          lugarTrabajo: rep.lugarTrabajo ? rep.lugarTrabajo.toUpperCase() : null,
         },
         ninos: ninos
           .map((n, i) => ({
@@ -237,8 +270,23 @@ export default function InscripcionPublica() {
             ctaller2: n.ctaller2
               ? Number(n.ctaller2)
               : null,
+            bautizado: n.bautizado === "true",
+            bautizadoFecha: n.bautizadoFecha || null,
+            bautizadoParroquia: n.bautizadoParroquia ? n.bautizadoParroquia.toUpperCase() : null,
+            eucaristia: n.eucaristia === "true",
+            eucaristiaFecha: n.eucaristiaFecha || null,
+            eucaristiaParroquia: n.eucaristiaParroquia ? n.eucaristiaParroquia.toUpperCase() : null,
+            nivelCatequesis: n.nivelCatequesis ? Number(n.nivelCatequesis) : null,
+            turno: n.turno ? Number(n.turno) : null,
           }))
           .filter((_, i) => !ninosDuplicados[i]),
+        padres: padres.filter(p => p.nombre.trim() !== '').map((p, i) => ({
+          tipoPadre: i === 0 ? "padre" : "madre",
+          nombre: p.nombre.toUpperCase(),
+          ocupacion: p.ocupacion ? p.ocupacion.toUpperCase() : null,
+          lugarTrabajo: p.lugarTrabajo ? p.lugarTrabajo.toUpperCase() : null,
+          telefono: p.telefono || null,
+        })),
         fichas: fichas.map(f => ({
           sectorResidencia: f.sectorResidencia
             ? f.sectorResidencia.toUpperCase()
@@ -272,9 +320,13 @@ export default function InscripcionPublica() {
         celular: "",
         contactoEmergenciaNombre: "",
         contactoEmergenciaTelefono: "",
+        estadoCivil: "",
+        ocupacion: "",
+        lugarTrabajo: "",
       });
       setNinos([{ ...emptyNino }]);
       setFichas([{ ...emptyFicha }]);
+      setPadres([{ ...emptyPadre }, { ...emptyPadre }]);
       setRepEncontrado(false);
       setNinosDuplicados({});
       setAceptoTerminos(false);
@@ -547,6 +599,50 @@ export default function InscripcionPublica() {
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Estado Civil
+                      </label>
+                      <select
+                        name="estadoCivil"
+                        value={rep.estadoCivil}
+                        onChange={handleRepChange}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white transition-colors"
+                      >
+                        <option value="">Seleccione</option>
+                        <option value="Casados Civil">Casados Civil</option>
+                        <option value="Casados Eclesiastico">Casados Eclesiástico</option>
+                        <option value="Union Libre">Unión Libre</option>
+                        <option value="Divorciado">Divorciado</option>
+                        <option value="Viudo">Viudo</option>
+                        <option value="Soltero">Soltero</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Ocupación
+                      </label>
+                      <input
+                        type="text"
+                        name="ocupacion"
+                        value={rep.ocupacion}
+                        onChange={handleRepChange}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Lugar de Trabajo
+                      </label>
+                      <input
+                        type="text"
+                        name="lugarTrabajo"
+                        value={rep.lugarTrabajo}
+                        onChange={handleRepChange}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                      />
+                    </div>
                   </>
                 )}
               </div>
@@ -583,6 +679,48 @@ export default function InscripcionPublica() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Padres */}
+            <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 mb-6">
+              <button type="button" onClick={() => setShowPadres(!showPadres)}
+                className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors">
+                <svg className={`h-4 w-4 transition-transform ${showPadres ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                Datos del Padre y la Madre
+              </button>
+              {showPadres && (
+                <div className="mt-4 space-y-4">
+                  {['Padre', 'Madre'].map((label, i) => (
+                    <div key={i} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                      <span className="text-xs font-semibold text-gray-600 mb-3 block">{label}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
+                          <input type="text" value={padres[i]?.nombre || ''} onChange={(e) => handlePadreChange(i, 'nombre', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Ocupación</label>
+                          <input type="text" value={padres[i]?.ocupacion || ''} onChange={(e) => handlePadreChange(i, 'ocupacion', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Lugar de Trabajo</label>
+                          <input type="text" value={padres[i]?.lugarTrabajo || ''} onChange={(e) => handlePadreChange(i, 'lugarTrabajo', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Teléfono</label>
+                          <input type="text" value={padres[i]?.telefono || ''} onChange={(e) => handlePadreChange(i, 'telefono', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Niños */}
@@ -697,6 +835,82 @@ export default function InscripcionPublica() {
                               <option key={t.id} value={t.id}>{t.siglas} — {t.nombre}</option>
                             ))}
                           </select>
+                        </div>
+                      </div>
+                      <div className="md:col-span-2 border-t border-gray-200 pt-3 mt-2">
+                        <h5 className="text-xs font-semibold text-gray-600 mb-2">Sacramentos</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Bautizado</label>
+                            <select name="bautizado" value={nino.bautizado} onChange={(e) => handleNinoChange(idx, e)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                              <option value="">Seleccione</option>
+                              <option value="true">Sí</option>
+                              <option value="false">No</option>
+                            </select>
+                          </div>
+                          {nino.bautizado === 'true' && (
+                            <>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Fecha Bautismo</label>
+                                <input type="date" name="bautizadoFecha" value={nino.bautizadoFecha} onChange={(e) => handleNinoChange(idx, e)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Parroquia Bautismo</label>
+                                <input type="text" name="bautizadoParroquia" value={nino.bautizadoParroquia} onChange={(e) => handleNinoChange(idx, e)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                              </div>
+                            </>
+                          )}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Primera Comunión</label>
+                            <select name="eucaristia" value={nino.eucaristia} onChange={(e) => handleNinoChange(idx, e)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                              <option value="">Seleccione</option>
+                              <option value="true">Sí</option>
+                              <option value="false">No</option>
+                            </select>
+                          </div>
+                          {nino.eucaristia === 'true' && (
+                            <>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Fecha Comunión</label>
+                                <input type="date" name="eucaristiaFecha" value={nino.eucaristiaFecha} onChange={(e) => handleNinoChange(idx, e)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Parroquia Comunión</label>
+                                <input type="text" name="eucaristiaParroquia" value={nino.eucaristiaParroquia} onChange={(e) => handleNinoChange(idx, e)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="md:col-span-2 border-t border-gray-200 pt-3 mt-2">
+                        <h5 className="text-xs font-semibold text-gray-600 mb-2">Catequesis</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Nivel de Catequesis</label>
+                            <select name="nivelCatequesis" value={nino.nivelCatequesis} onChange={(e) => handleNinoChange(idx, e)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                              <option value="">Seleccione</option>
+                              {nivelesCatequesis.map((nc) => (
+                                <option key={nc.id} value={nc.id}>{nc.nombre}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Turno</label>
+                            <select name="turno" value={nino.turno} onChange={(e) => handleNinoChange(idx, e)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                              <option value="">Seleccione</option>
+                              {turnos.map((t) => (
+                                <option key={t.id} value={t.id}>{t.nombre}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                       </div>
                       <div className="md:col-span-2 border-t border-gray-200 pt-3 mt-2">

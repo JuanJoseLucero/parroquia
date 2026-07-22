@@ -46,8 +46,12 @@ public class InscripcionCompletaFacade {
             personaRep.setDireccion(getString(repJson, "direccion"));
             personaRep.setEmail(getString(repJson, "email"));
             personaRep.setCelular(getString(repJson, "celular"));
+            personaRep.setEstadoCivil(getString(repJson, "estadoCivil"));
             personaRep.setActivo(true);
             em.persist(personaRep);
+        } else if (hasValue(repJson, "estadoCivil")) {
+            personaRep.setEstadoCivil(getString(repJson, "estadoCivil"));
+            em.merge(personaRep);
         }
 
         // 2. Representante — buscar o crear
@@ -63,6 +67,8 @@ public class InscripcionCompletaFacade {
         }
         representante.setContactoEmergenciaNombre(getString(repJson, "contactoEmergenciaNombre"));
         representante.setContactoEmergenciaTelefono(getString(repJson, "contactoEmergenciaTelefono"));
+        representante.setOcupacion(getString(repJson, "ocupacion"));
+        representante.setLugarTrabajo(getString(repJson, "lugarTrabajo"));
         if (representante.getId() == null) {
             em.persist(representante);
         } else {
@@ -76,6 +82,43 @@ public class InscripcionCompletaFacade {
         cabecera.setCrepresentante(representante.getId());
         cabecera.setActivo(true);
         em.persist(cabecera);
+
+        // 3.1 Padres (padre y madre) si se envían
+        JsonArray padresJson = json.containsKey("padres") && !json.isNull("padres")
+            ? json.getJsonArray("padres") : null;
+        if (padresJson != null) {
+            for (int p = 0; p < padresJson.size(); p++) {
+                JsonObject padreJson = padresJson.getJsonObject(p);
+                String tipoPadre = getString(padreJson, "tipoPadre");
+                if (tipoPadre == null || tipoPadre.isBlank()) continue;
+
+                Persona personaPadre = null;
+                String padreCedula = getString(padreJson, "cedula");
+                if (padreCedula != null && !padreCedula.isBlank()) {
+                    personaPadre = em.createQuery(
+                        "SELECT p FROM Persona p WHERE p.cedula = :cedula AND p.activo = true",
+                        Persona.class
+                    ).setParameter("cedula", padreCedula).getResultStream().findFirst().orElse(null);
+                }
+
+                if (personaPadre == null) {
+                    personaPadre = new Persona();
+                    personaPadre.setCedula(padreCedula);
+                    personaPadre.setNombres(getString(padreJson, "nombre"));
+                    personaPadre.setCelular(getString(padreJson, "telefono"));
+                    personaPadre.setActivo(true);
+                    em.persist(personaPadre);
+                }
+
+                Padre padre = new Padre();
+                padre.setCpersona(personaPadre.getId());
+                padre.setTipoPadre(tipoPadre);
+                padre.setOcupacion(getString(padreJson, "ocupacion"));
+                padre.setLugarTrabajo(getString(padreJson, "lugarTrabajo"));
+                padre.setActivo(true);
+                em.persist(padre);
+            }
+        }
 
         // 4. Leer fichas por niño
         JsonArray fichasJson = json.containsKey("fichas") && !json.isNull("fichas")
@@ -133,8 +176,29 @@ public class InscripcionCompletaFacade {
             detalle.setCinscripcionCabecera(cabecera.getId());
             detalle.setTninio(ninio.getId());
             detalle.setCestadoinscripcion(1);
+            if (hasValue(ninJson, "nivelCatequesis")) {
+                detalle.setCnivelcatequesis(getInt(ninJson, "nivelCatequesis"));
+            }
             detalle.setActivo(true);
             em.persist(detalle);
+
+            // Sacramento por niño (bautizo, eucaristía)
+            if (hasValue(ninJson, "bautizado") || hasValue(ninJson, "eucaristia")) {
+                Sacramento sacramento = new Sacramento();
+                sacramento.setTninio(ninio.getId());
+                sacramento.setBautizado(getBoolean(ninJson, "bautizado", false));
+                if (hasValue(ninJson, "bautizadoFecha")) {
+                    sacramento.setBautizadoFecha(LocalDate.parse(ninJson.getString("bautizadoFecha")));
+                }
+                sacramento.setBautizadoParroquia(getString(ninJson, "bautizadoParroquia"));
+                sacramento.setEucaristia(getBoolean(ninJson, "eucaristia", false));
+                if (hasValue(ninJson, "eucaristiaFecha")) {
+                    sacramento.setEucaristiaFecha(LocalDate.parse(ninJson.getString("eucaristiaFecha")));
+                }
+                sacramento.setEucaristiaParroquia(getString(ninJson, "eucaristiaParroquia"));
+                sacramento.setActivo(true);
+                em.persist(sacramento);
+            }
 
             // Ficha sociodemográfica por niño
             if (fichasJson != null && i < fichasJson.size()) {
@@ -196,5 +260,12 @@ public class InscripcionCompletaFacade {
 
     private boolean hasValue(JsonObject json, String key) {
         return json.containsKey(key) && !json.isNull(key);
+    }
+
+    private boolean getBoolean(JsonObject json, String key, boolean defaultValue) {
+        if (json.containsKey(key) && !json.isNull(key)) {
+            return json.getBoolean(key);
+        }
+        return defaultValue;
     }
 }
