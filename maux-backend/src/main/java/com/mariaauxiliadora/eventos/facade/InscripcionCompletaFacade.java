@@ -29,6 +29,7 @@ public class InscripcionCompletaFacade {
         JsonObject repJson = json.getJsonObject("representante");
         JsonArray ninosJson = json.getJsonArray("ninos");
         int cusuario = json.getInt("cusuario", 1);
+        Integer cevento = hasValue(json, "cevento") ? json.getInt("cevento") : null;
 
         String repCedula = getString(repJson, "cedula");
 
@@ -80,6 +81,7 @@ public class InscripcionCompletaFacade {
         cabecera.setFecha(LocalDate.now());
         cabecera.setCusuario(cusuario);
         cabecera.setCrepresentante(representante.getId());
+        cabecera.setCevento(cevento);
         cabecera.setActivo(true);
         em.persist(cabecera);
 
@@ -138,11 +140,18 @@ public class InscripcionCompletaFacade {
             ).setParameter("cedula", ninCedula).getResultStream().findFirst().orElse(null);
 
             if (personaNin != null) {
-                Ninio existente = em.createQuery(
-                    "SELECT n FROM Ninio n JOIN InscripcionDetalle d ON d.tninio = n.id " +
-                    "WHERE n.cpersona = :cpersona AND n.activo = true AND d.activo = true",
-                    Ninio.class
-                ).setParameter("cpersona", personaNin.getId()).getResultStream().findFirst().orElse(null);
+                String dupQuery = "SELECT n FROM Ninio n JOIN InscripcionDetalle d ON d.tninio = n.id " +
+                    "JOIN InscripcionCabecera c ON c.id = d.cinscripcionCabecera " +
+                    "WHERE n.cpersona = :cpersona AND n.activo = true AND d.activo = true";
+                if (cevento != null) {
+                    dupQuery += " AND c.cevento = :cevento";
+                }
+                var dupTypedQuery = em.createQuery(dupQuery, Ninio.class)
+                    .setParameter("cpersona", personaNin.getId());
+                if (cevento != null) {
+                    dupTypedQuery.setParameter("cevento", cevento);
+                }
+                Ninio existente = dupTypedQuery.getResultStream().findFirst().orElse(null);
 
                 if (existente != null) {
                     rechazados.add(personaNin.getNombres() + " " + personaNin.getApellidos());

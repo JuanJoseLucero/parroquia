@@ -62,6 +62,7 @@ export default function NuevaInscripcion() {
     const [talleresAulicos, setTalleresAulicos] = useState([]);
     const [nivelesCatequesis, setNivelesCatequesis] = useState([]);
     const [turnos, setTurnos] = useState([]);
+    const [eventoActual, setEventoActual] = useState(null);
     const [padres, setPadres] = useState([{ ...emptyPadre }, { ...emptyPadre }]);
     const [showPadres, setShowPadres] = useState(false);
     const handleFichaChange = (index, field, value) => {
@@ -90,6 +91,10 @@ export default function NuevaInscripcion() {
 
     useEffect(() => {
         post("/turnos/listar", { page: 0, size: 100 }).then(res => setTurnos(res.data || [])).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        post("/eventos/actual", {}).then(setEventoActual).catch(() => {});
     }, []);
 
     const handleRepChange = (e) => {
@@ -229,6 +234,7 @@ export default function NuevaInscripcion() {
                     comoConocioOtro: f.comoConocio === "Otros" && f.comoConocioOtro ? f.comoConocioOtro.toUpperCase() : null,
                 })),
                 cusuario: 1,
+                ...(eventoActual ? { cevento: eventoActual.id } : {}),
             });
 
             setSuccess({

@@ -89,6 +89,7 @@ export default function InscripcionPublica() {
   const [showPadres, setShowPadres] = useState(false);
   const [nivelesCatequesis, setNivelesCatequesis] = useState([]);
   const [turnos, setTurnos] = useState([]);
+  const [eventoActual, setEventoActual] = useState(null);
 
   const handlePadreChange = (index, field, value) => {
     setPadres(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
@@ -115,6 +116,10 @@ export default function InscripcionPublica() {
 
   useEffect(() => {
     post("/turnos/listar", { page: 0, size: 100 }).then(res => setTurnos(res.data || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    post("/eventos/actual", {}).then(setEventoActual).catch(() => {});
   }, []);
 
   const handleRepChange = (e) =>
@@ -302,6 +307,7 @@ export default function InscripcionPublica() {
             : null,
         })),
         cusuario: 1,
+        ...(eventoActual ? { cevento: eventoActual.id } : {}),
       });
 
       setSuccess({

@@ -21,6 +21,9 @@ public class InscripcionCabecera implements Serializable {
     @Column(name = "crepresentante")
     private Integer crepresentante;
 
+    @Column(name = "cevento")
+    private Integer cevento;
+
     @Column(name = "notas")
     private String notas;
 
@@ -37,6 +40,8 @@ public class InscripcionCabecera implements Serializable {
     public void setCusuario(Integer cusuario) { this.cusuario = cusuario; }
     public Integer getCrepresentante() { return crepresentante; }
     public void setCrepresentante(Integer crepresentante) { this.crepresentante = crepresentante; }
+    public Integer getCevento() { return cevento; }
+    public void setCevento(Integer cevento) { this.cevento = cevento; }
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }
     public Boolean getActivo() { return activo; }

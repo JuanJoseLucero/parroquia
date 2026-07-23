@@ -9,6 +9,7 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.time.Year;
 
 @Path("/eventos")
 @Produces(MediaType.APPLICATION_JSON)
@@ -44,6 +45,16 @@ public class EventoResource {
     public Response obtener(JsonObject json) {
         int id = json.getInt("id");
         return facade.findByIdActivo(id)
+                .map(e -> Response.ok(e).build())
+                .orElse(Response.status(Response.Status.NOT_FOUND).build());
+    }
+
+    @POST
+    @Path("/actual")
+    public Response eventoActual(JsonObject json) {
+        int anio = json.containsKey("anio") && !json.isNull("anio")
+            ? json.getInt("anio") : Year.now().getValue();
+        return facade.findActivoByAnio(anio)
                 .map(e -> Response.ok(e).build())
                 .orElse(Response.status(Response.Status.NOT_FOUND).build());
     }
