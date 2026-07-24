@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.io.Serializable;
 
 @Entity
-@Table(schema = "eventos", name = "ttaller")
+@Table(schema = "catequesis", name = "ttaller")
 public class Taller implements Serializable {
 
     @Id

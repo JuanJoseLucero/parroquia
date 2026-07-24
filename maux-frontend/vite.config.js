@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/oratorio/' : '/',
+  base: mode === 'production' ? '/parroquiama/' : '/',
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {

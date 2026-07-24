@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.time.LocalTime;
 
 @Entity
-@Table(schema = "eventos", name = "tasistencias")
+@Table(schema = "catequesis", name = "tasistencias")
 public class Asistencia implements Serializable {
 
     @Id

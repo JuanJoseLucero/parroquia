@@ -27,6 +27,10 @@
         <class>com.mariaauxiliadora.eventos.entity.Pago</class>
         <class>com.mariaauxiliadora.eventos.entity.Taller</class>
         <class>com.mariaauxiliadora.eventos.entity.FichaSociodemografica</class>
+        <class>com.mariaauxiliadora.eventos.entity.Padre</class>
+        <class>com.mariaauxiliadora.eventos.entity.Sacramento</class>
+        <class>com.mariaauxiliadora.eventos.entity.NivelCatequesis</class>
+        <class>com.mariaauxiliadora.eventos.entity.Turno</class>
 
         <properties>
             <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>

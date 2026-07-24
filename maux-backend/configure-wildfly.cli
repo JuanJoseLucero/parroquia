@@ -17,10 +17,10 @@ module add --name=org.postgresql \
 )
 
 # 3. Crear datasource JTA
-/subsystem=datasources/data-source=MariaAuxiliadoraDS:add( \
-    jndi-name="java:/MariaAuxiliadoraDS", \
+/subsystem=datasources/data-source=CATEQUESIS:add( \
+    jndi-name="java:/CATEQUESIS", \
     driver-name="postgresql", \
-    connection-url="jdbc:postgresql://localhost:5432/MARIA_AUXILIADORA", \
+    connection-url="jdbc:postgresql://localhost:5432/MARIA_AUXILIADORA?currentSchema=catequesis", \
     user-name="app_web", \
     password="jImAjNFUCqB0L2KU", \
     jta="true", \
@@ -29,7 +29,7 @@ module add --name=org.postgresql \
 )
 
 # 4. Habilitar el datasource
-/subsystem=datasources/data-source=MariaAuxiliadoraDS:enable
+/subsystem=datasources/data-source=CATEQUESIS:enable
 
 # 5. Recargar configuración
 reload

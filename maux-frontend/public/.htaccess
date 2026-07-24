@@ -1,6 +1,6 @@
 RewriteEngine On
-RewriteBase /oratorio/
+RewriteBase /parroquiama/
 RewriteRule ^index\.html$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /oratorio/index.html [L]
+RewriteRule . /parroquiama/index.html [L]
