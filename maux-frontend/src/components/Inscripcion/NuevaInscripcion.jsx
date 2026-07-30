@@ -33,6 +33,10 @@ function getRangoEdad(edad) {
     return null;
 }
 
+const onlyAlpha = (v) => v.replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/g, '');
+const onlyDigits = (v) => v.replace(/\D/g, '');
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
 const STEPS = ['Datos Familiares', 'Niños'];
 const emptyNino = {
     cedula: '', nombres: '', apellidos: '', fechaNacimiento: '', sexo: '', alergias: '', condicionesMedicas: '',
@@ -68,6 +72,8 @@ export default function NuevaInscripcion() {
 
     const [repEncontrado, setRepEncontrado] = useState(false);
     const [consultandoCedula, setConsultandoCedula] = useState(false);
+    const [consultandoPadre, setConsultandoPadre] = useState({ 0: false, 1: false });
+    const [padreEncontrado, setPadreEncontrado] = useState({ 0: false, 1: false });
     const [ninosDuplicados, setNinosDuplicados] = useState({});
 
     useEffect(() => {
@@ -83,18 +89,28 @@ export default function NuevaInscripcion() {
     }, []);
 
     const handleRepChange = (e) => {
-        if (e.target.name === 'cedula') setRepEncontrado(false);
-        setRep({ ...rep, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        if (name === 'cedula') setRepEncontrado(false);
+        let sanitized = value;
+        if (['nombres', 'apellidos', 'ocupacion', 'lugarTrabajo'].includes(name)) sanitized = onlyAlpha(value);
+        if (name === 'celular') sanitized = onlyDigits(value);
+        setRep({ ...rep, [name]: sanitized });
     };
 
     const handlePadreChange = (index, field, value) => {
+        let sanitized = value;
+        if (field !== 'esRepresentante') {
+            if (['nombres', 'apellidos', 'ocupacion', 'lugarTrabajo'].includes(field)) sanitized = onlyAlpha(value);
+            if (['telefono', 'cedula'].includes(field)) sanitized = onlyDigits(value);
+        }
+        if (field === 'cedula') setPadreEncontrado(prev => ({ ...prev, [index]: false }));
         setPadres(prev => {
             const u = [...prev];
             if (field === 'esRepresentante' && value) {
                 u[0] = { ...u[0], esRepresentante: index === 0 };
                 u[1] = { ...u[1], esRepresentante: index === 1 };
             } else {
-                u[index] = { ...u[index], [field]: value };
+                u[index] = { ...u[index], [field]: sanitized };
             }
             return u;
         });
@@ -119,6 +135,29 @@ export default function NuevaInscripcion() {
         }
     };
 
+    const handleParentCedulaBlur = async (index) => {
+        const cedula = padres[index].cedula.trim();
+        if (!cedula || cedula.length < 10) return;
+        setConsultandoPadre(prev => ({ ...prev, [index]: true }));
+        try {
+            const res = await post('/inscripciones/buscar-por-cedula', { cedula });
+            if (res.existe) {
+                setPadreEncontrado(prev => ({ ...prev, [index]: true }));
+                setPadres(prev => {
+                    const u = [...prev];
+                    u[index] = { ...u[index], nombres: res.nombres, apellidos: res.apellidos };
+                    return u;
+                });
+            } else {
+                setPadreEncontrado(prev => ({ ...prev, [index]: false }));
+            }
+        } catch {
+            setPadreEncontrado(prev => ({ ...prev, [index]: false }));
+        } finally {
+            setConsultandoPadre(prev => ({ ...prev, [index]: false }));
+        }
+    };
+
     const handleNinoCedulaBlur = async (index, cedula) => {
         const cd = cedula.trim();
         if (!cd || cd.length < 10) return;
@@ -136,7 +175,9 @@ export default function NuevaInscripcion() {
     const handleNinoChange = (index, e) => {
         const updated = [...ninos];
         const { name, value } = e.target;
-        updated[index] = { ...updated[index], [name]: value };
+        let sanitized = value;
+        if (['nombres', 'apellidos'].includes(name)) sanitized = onlyAlpha(value);
+        updated[index] = { ...updated[index], [name]: sanitized };
 
         setNinos(updated);
     };
@@ -167,6 +208,16 @@ export default function NuevaInscripcion() {
                     setError('Cédula, nombres y apellidos del representante legal son requeridos.');
                     return;
                 }
+            }
+
+            const repEmail = padres[0].esRepresentante
+                ? padres[0].email
+                : padres[1].esRepresentante
+                ? padres[1].email
+                : rep.email;
+            if (repEmail && !isValidEmail(repEmail)) {
+                setError('El correo electrónico del representante no tiene un formato válido.');
+                return;
             }
         }
         setStep(step + 1);
@@ -245,6 +296,7 @@ export default function NuevaInscripcion() {
                 })),
                 padres: padres.filter(p => p.nombres.trim() !== '').map((p, i) => ({
                     tipoPadre: i === 0 ? 'padre' : 'madre',
+                    cedula: p.cedula || null,
                     nombre: `${p.nombres} ${p.apellidos}`.trim().toUpperCase(),
                     ocupacion: p.ocupacion ? p.ocupacion.toUpperCase() : null,
                     lugarTrabajo: p.lugarTrabajo ? p.lugarTrabajo.toUpperCase() : null,
@@ -265,17 +317,13 @@ export default function NuevaInscripcion() {
             setPadres([{ ...emptyPadre }, { ...emptyPadre }]);
             setRepEncontrado(false);
             setConsultandoCedula(false);
+            setPadreEncontrado({ 0: false, 1: false });
             setNinosDuplicados({});
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleRetry = () => {
-        setError(null);
-        handleSubmit();
     };
 
     return (
@@ -308,13 +356,9 @@ export default function NuevaInscripcion() {
                     <svg className="h-10 w-10 text-red-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
-                    <p className="text-red-800 font-bold mb-1">Error de conexión</p>
-                    <p className="text-red-600 text-sm mb-4">No se pudo enviar la inscripción. Verifique su conexión e intente nuevamente.</p>
+                    <p className="text-red-800 font-bold mb-1">Error</p>
+                    <p className="text-red-600 text-sm mb-4">{error}</p>
                     <div className="flex justify-center gap-3">
-                        <button onClick={handleRetry}
-                            className="px-5 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors">
-                            Intentar nuevamente
-                        </button>
                         <button onClick={() => setError(null)}
                             className="px-5 py-2 border border-red-300 text-red-600 text-sm rounded-lg hover:bg-red-100 transition-colors">
                             Cerrar
@@ -347,13 +391,19 @@ export default function NuevaInscripcion() {
                                 <ParentSection
                                     label="Padre"
                                     data={padres[0]}
-                                    onChange={(field, value) => handlePadreChange(0, field, value)} />
+                                    onChange={(field, value) => handlePadreChange(0, field, value)}
+                                    onCedulaBlur={() => handleParentCedulaBlur(0)}
+                                    consultando={consultandoPadre[0]}
+                                    encontrado={padreEncontrado[0]} />
 
                                 {/* --- MADRE --- */}
                                 <ParentSection
                                     label="Madre"
                                     data={padres[1]}
-                                    onChange={(field, value) => handlePadreChange(1, field, value)} />
+                                    onChange={(field, value) => handlePadreChange(1, field, value)}
+                                    onCedulaBlur={() => handleParentCedulaBlur(1)}
+                                    consultando={consultandoPadre[1]}
+                                    encontrado={padreEncontrado[1]} />
 
                                 {/* --- REPRESENTANTE LEGAL (manual) --- */}
                                 {!padres[0].esRepresentante && !padres[1].esRepresentante && (
@@ -375,13 +425,13 @@ export default function NuevaInscripcion() {
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-600 mb-1">Nombres *</label>
-                                                <input type="text" name="nombres" value={repEncontrado ? maskText(rep.nombres) : rep.nombres} onChange={handleRepChange}
+                                                <input type="text" name="nombres" value={repEncontrado ? maskText(rep.nombres) : rep.nombres} onChange={handleRepChange} maxLength={200}
                                                     readOnly={repEncontrado}
                                                     className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none transition-colors ${repEncontrado ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}`} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-600 mb-1">Apellidos *</label>
-                                                <input type="text" name="apellidos" value={repEncontrado ? maskText(rep.apellidos) : rep.apellidos} onChange={handleRepChange}
+                                                <input type="text" name="apellidos" value={repEncontrado ? maskText(rep.apellidos) : rep.apellidos} onChange={handleRepChange} maxLength={200}
                                                     readOnly={repEncontrado}
                                                     className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none transition-colors ${repEncontrado ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}`} />
                                             </div>
@@ -397,7 +447,7 @@ export default function NuevaInscripcion() {
                                                 <>
                                                     <Input label="Sector" name="direccion" value={rep.direccion} onChange={handleRepChange} />
                                                     <Input label="Email" name="email" type="email" value={rep.email} onChange={handleRepChange} />
-                                                    <Input label="Celular" name="celular" value={rep.celular} onChange={handleRepChange} />
+                                                    <Input label="Celular" name="celular" value={rep.celular} onChange={handleRepChange} maxLength={15} />
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-600 mb-1">Estado Civil</label>
                                                         <select name="estadoCivil" value={rep.estadoCivil} onChange={handleRepChange}
@@ -412,8 +462,8 @@ export default function NuevaInscripcion() {
                                                             <option value="Otro">Otro</option>
                                                         </select>
                                                     </div>
-                                                    <Input label="Ocupación" name="ocupacion" value={rep.ocupacion} onChange={handleRepChange} />
-                                                    <Input label="Lugar de Trabajo" name="lugarTrabajo" value={rep.lugarTrabajo} onChange={handleRepChange} />
+                                                    <Input label="Ocupación" name="ocupacion" value={rep.ocupacion} onChange={handleRepChange} maxLength={200} />
+                                                    <Input label="Lugar de Trabajo" name="lugarTrabajo" value={rep.lugarTrabajo} onChange={handleRepChange} maxLength={200} />
                                                 </>
                                             )}
                                         </div>
@@ -455,12 +505,12 @@ export default function NuevaInscripcion() {
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-medium text-gray-500 mb-1">Nombres *</label>
-                                                    <input type="text" name="nombres" value={nino.nombres} onChange={(e) => handleNinoChange(idx, e)}
+                                                    <input type="text" name="nombres" value={nino.nombres} onChange={(e) => handleNinoChange(idx, e)} maxLength={200}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-medium text-gray-500 mb-1">Apellidos *</label>
-                                                    <input type="text" name="apellidos" value={nino.apellidos} onChange={(e) => handleNinoChange(idx, e)}
+                                                    <input type="text" name="apellidos" value={nino.apellidos} onChange={(e) => handleNinoChange(idx, e)} maxLength={200}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                                                 </div>
                                                 <div>
@@ -481,12 +531,12 @@ export default function NuevaInscripcion() {
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-medium text-gray-500 mb-1">Alergias</label>
-                                                    <input type="text" name="alergias" value={nino.alergias} onChange={(e) => handleNinoChange(idx, e)}
+                                                    <input type="text" name="alergias" value={nino.alergias} onChange={(e) => handleNinoChange(idx, e)} maxLength={200}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-medium text-gray-500 mb-1">Condiciones Médicas</label>
-                                                    <input type="text" name="condicionesMedicas" value={nino.condicionesMedicas} onChange={(e) => handleNinoChange(idx, e)}
+                                                    <input type="text" name="condicionesMedicas" value={nino.condicionesMedicas} onChange={(e) => handleNinoChange(idx, e)} maxLength={200}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                                                 </div>
                                             </div>
@@ -623,7 +673,7 @@ const estadoCivilOptions = [
     'Divorciado', 'Viudo', 'Soltero', 'Otro'
 ];
 
-function ParentSection({ label, data, onChange }) {
+function ParentSection({ label, data, onChange, onCedulaBlur, consultando, encontrado }) {
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -636,17 +686,39 @@ function ParentSection({ label, data, onChange }) {
                 </label>
             </div>
             <div className="grid grid-cols-2 gap-3">
-                <Input label="Nombres" value={data.nombres} onChange={(e) => onChange('nombres', e.target.value)} />
-                <Input label="Apellidos" value={data.apellidos} onChange={(e) => onChange('apellidos', e.target.value)} />
-                <Input label="Ocupación" value={data.ocupacion} onChange={(e) => onChange('ocupacion', e.target.value)} />
-                <Input label="Lugar de Trabajo" value={data.lugarTrabajo} onChange={(e) => onChange('lugarTrabajo', e.target.value)} />
-                <Input label="Teléfono" value={data.telefono} onChange={(e) => onChange('telefono', e.target.value)} />
+                <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Cédula</label>
+                    <div className="relative">
+                        <input type="text" value={data.cedula} onChange={(e) => onChange('cedula', onlyDigits(e.target.value))} maxLength={10}
+                            onBlur={onCedulaBlur}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        {consultando && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full" />
+                        )}
+                        {encontrado && !consultando && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-xs font-medium">✓</span>
+                        )}
+                    </div>
+                </div>
+                <Input label="Nombres" value={data.nombres} onChange={(e) => onChange('nombres', e.target.value)} sanitize="alpha" maxLength={200} readOnly={encontrado} />
+                <Input label="Apellidos" value={data.apellidos} onChange={(e) => onChange('apellidos', e.target.value)} sanitize="alpha" maxLength={200} readOnly={encontrado} />
+                <Input label="Ocupación" value={data.ocupacion} onChange={(e) => onChange('ocupacion', e.target.value)} sanitize="alpha" maxLength={200} />
+                <Input label="Lugar de Trabajo" value={data.lugarTrabajo} onChange={(e) => onChange('lugarTrabajo', e.target.value)} sanitize="alpha" maxLength={200} />
+                <Input label="Teléfono" value={data.telefono} onChange={(e) => onChange('telefono', e.target.value)} sanitize="digit" maxLength={15} />
             </div>
+            {encontrado && (
+                <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    <svg className="h-4 w-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Persona ya registrada.
+                </div>
+            )}
             {data.esRepresentante && (
                 <div className="border-t border-gray-100 pt-3 space-y-3">
                     <span className="text-xs font-semibold text-gray-600 block">Datos del Representante Legal</span>
                     <div className="grid grid-cols-2 gap-3">
-                        <Input label="Cédula *" value={data.cedula} onChange={(e) => onChange('cedula', e.target.value)} />
+                        <Input label="Cédula *" value={data.cedula} onChange={(e) => onChange('cedula', e.target.value)} maxLength={10} />
                         <Input label="Email" type="email" value={data.email} onChange={(e) => onChange('email', e.target.value)} />
                         <Input label="Sector" value={data.direccion} onChange={(e) => onChange('direccion', e.target.value)} />
                         <div>
@@ -666,7 +738,16 @@ function ParentSection({ label, data, onChange }) {
     );
 }
 
-function Input({ label, name, type = 'text', value, onChange, maxLength }) {
+function Input({ label, name, type = 'text', value, onChange, maxLength, sanitize, readOnly }) {
+    const handleChange = sanitize
+        ? (e) => {
+            let v = e.target.value;
+            if (sanitize === 'alpha') v = onlyAlpha(v);
+            if (sanitize === 'digit') v = onlyDigits(v);
+            e.target.value = v;
+            onChange(e);
+          }
+        : onChange;
     return (
         <div>
             <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
@@ -674,9 +755,10 @@ function Input({ label, name, type = 'text', value, onChange, maxLength }) {
                 type={type}
                 name={name}
                 value={value}
-                onChange={onChange}
+                onChange={handleChange}
+                readOnly={readOnly}
                 maxLength={maxLength}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none transition-colors ${readOnly ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}`}
             />
         </div>
     );
