@@ -7,7 +7,7 @@ import { formatMoney } from '../../utils/formatters';
 
 const API_BASE = import.meta.env.PROD
     ? '/api'
-    : '/maux-backend/api';
+    : '/maux-backend_catequesis/api';
 
 export default function Dashboard() {
     const [stats, setStats] = useState({ inscritos: 0, recaudado: 0, pendiente: 0 });

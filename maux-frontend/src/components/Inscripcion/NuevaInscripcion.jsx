@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 
 const API_BASE = import.meta.env.PROD
     ? '/api'
-    : '/maux-backend/api';
+    : '/maux-backend_catequesis/api';
 
 async function post(endpoint, body = {}) {
     const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -33,15 +33,19 @@ function getRangoEdad(edad) {
     return null;
 }
 
-const STEPS = ['Representante', 'Niños'];
+const STEPS = ['Datos Familiares', 'Niños'];
 const emptyNino = {
-    cedula: '', nombres: '', apellidos: '', fechaNacimiento: '', sexo: '', alergias: '', condicionesMedicas: '', ctaller: '', ctaller2: '',
+    cedula: '', nombres: '', apellidos: '', fechaNacimiento: '', sexo: '', alergias: '', condicionesMedicas: '',
     bautizado: '', bautizadoFecha: '', bautizadoParroquia: '',
     eucaristia: '', eucaristiaFecha: '', eucaristiaParroquia: '',
     nivelCatequesis: '', turno: ''
 };
-const emptyFicha = { sectorResidencia: '', tipoInstitucion: '', institucionEducativa: '', nivelEducativo: '', comoConocio: '', comoConocioOtro: '' };
-const emptyPadre = { nombre: '', ocupacion: '', lugarTrabajo: '', telefono: '' };
+const emptyPadre = {
+    nombres: '', apellidos: '', ocupacion: '', lugarTrabajo: '', telefono: '',
+    esRepresentante: false,
+    cedula: '', direccion: '', email: '', celular: '',
+    estadoCivil: ''
+};
 
 const maskText = (text) => {
     if (!text || text.length <= 2) return text || '';
@@ -55,35 +59,16 @@ export default function NuevaInscripcion() {
     const [success, setSuccess] = useState(null);
     const [error, setError] = useState(null);
 
-    const [rep, setRep] = useState({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', contactoEmergenciaNombre: '', contactoEmergenciaTelefono: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
+    const [rep, setRep] = useState({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
     const [ninos, setNinos] = useState([{ ...emptyNino }]);
-    const [fichas, setFichas] = useState([{ ...emptyFicha }]);
-    const [talleresDeportivos, setTalleresDeportivos] = useState([]);
-    const [talleresAulicos, setTalleresAulicos] = useState([]);
     const [nivelesCatequesis, setNivelesCatequesis] = useState([]);
     const [turnos, setTurnos] = useState([]);
     const [eventoActual, setEventoActual] = useState(null);
     const [padres, setPadres] = useState([{ ...emptyPadre }, { ...emptyPadre }]);
-    const [showPadres, setShowPadres] = useState(false);
-    const handleFichaChange = (index, field, value) => {
-        setFichas(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
-    };
-
-    const handlePadreChange = (index, field, value) => {
-        setPadres(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
-    };
 
     const [repEncontrado, setRepEncontrado] = useState(false);
     const [consultandoCedula, setConsultandoCedula] = useState(false);
     const [ninosDuplicados, setNinosDuplicados] = useState({});
-
-    useEffect(() => {
-        post("/talleres/por-tipo", { tipo: "deportivo"}).then(setTalleresDeportivos).catch(() => {});
-      }, []);
-    
-      useEffect(() => {
-        post("/talleres/por-tipo", { tipo: "aulico"}).then(setTalleresAulicos).catch(() => {});
-      }, []);
 
     useEffect(() => {
         post("/niveles-catequesis/listar", { page: 0, size: 100 }).then(res => setNivelesCatequesis(res.data || [])).catch(() => {});
@@ -100,6 +85,19 @@ export default function NuevaInscripcion() {
     const handleRepChange = (e) => {
         if (e.target.name === 'cedula') setRepEncontrado(false);
         setRep({ ...rep, [e.target.name]: e.target.value });
+    };
+
+    const handlePadreChange = (index, field, value) => {
+        setPadres(prev => {
+            const u = [...prev];
+            if (field === 'esRepresentante' && value) {
+                u[0] = { ...u[0], esRepresentante: index === 0 };
+                u[1] = { ...u[1], esRepresentante: index === 1 };
+            } else {
+                u[index] = { ...u[index], [field]: value };
+            }
+            return u;
+        });
     };
 
     const handleCedulaBlur = async () => {
@@ -145,26 +143,72 @@ export default function NuevaInscripcion() {
 
     const addNino = () => {
         setNinos([...ninos, { ...emptyNino }]);
-        setFichas([...fichas, { ...emptyFicha }]);
     };
     const removeNino = (index) => {
         if (ninos.length === 1) return;
         setNinos(ninos.filter((_, i) => i !== index));
-        setFichas(fichas.filter((_, i) => i !== index));
     };
 
     const nextStep = () => {
         setError(null);
         if (step === 0) {
-            if (!rep.cedula || !rep.nombres || !rep.apellidos) {
-                setError('Cédula, nombres y apellidos del representante son requeridos.');
-                return;
+            if (padres[0].esRepresentante) {
+                if (!padres[0].cedula) {
+                    setError('Cédula del padre (representante legal) es requerida.');
+                    return;
+                }
+            } else if (padres[1].esRepresentante) {
+                if (!padres[1].cedula) {
+                    setError('Cédula de la madre (representante legal) es requerida.');
+                    return;
+                }
+            } else {
+                if (!rep.cedula || !rep.nombres || !rep.apellidos) {
+                    setError('Cédula, nombres y apellidos del representante legal son requeridos.');
+                    return;
+                }
             }
         }
         setStep(step + 1);
     };
 
     const prevStep = () => setStep(Math.max(0, step - 1));
+
+    const getRepresentanteEfectivo = () => {
+        if (padres[0].esRepresentante) return {
+            cedula: padres[0].cedula,
+            nombres: padres[0].nombres.toUpperCase(),
+            apellidos: padres[0].apellidos.toUpperCase(),
+            direccion: padres[0].direccion ? padres[0].direccion.toUpperCase() : null,
+            email: padres[0].email || null,
+            celular: padres[0].celular || padres[0].telefono || null,
+            estadoCivil: padres[0].estadoCivil || null,
+            ocupacion: padres[0].ocupacion ? padres[0].ocupacion.toUpperCase() : null,
+            lugarTrabajo: padres[0].lugarTrabajo ? padres[0].lugarTrabajo.toUpperCase() : null,
+        };
+        if (padres[1].esRepresentante) return {
+            cedula: padres[1].cedula,
+            nombres: padres[1].nombres.toUpperCase(),
+            apellidos: padres[1].apellidos.toUpperCase(),
+            direccion: padres[1].direccion ? padres[1].direccion.toUpperCase() : null,
+            email: padres[1].email || null,
+            celular: padres[1].celular || padres[1].telefono || null,
+            estadoCivil: padres[1].estadoCivil || null,
+            ocupacion: padres[1].ocupacion ? padres[1].ocupacion.toUpperCase() : null,
+            lugarTrabajo: padres[1].lugarTrabajo ? padres[1].lugarTrabajo.toUpperCase() : null,
+        };
+        return {
+            cedula: rep.cedula,
+            nombres: rep.nombres.toUpperCase(),
+            apellidos: rep.apellidos.toUpperCase(),
+            direccion: rep.direccion ? rep.direccion.toUpperCase() : null,
+            email: rep.email || null,
+            celular: rep.celular || null,
+            estadoCivil: rep.estadoCivil || null,
+            ocupacion: rep.ocupacion ? rep.ocupacion.toUpperCase() : null,
+            lugarTrabajo: rep.lugarTrabajo ? rep.lugarTrabajo.toUpperCase() : null,
+        };
+    };
 
     const handleSubmit = async () => {
         setError(null);
@@ -176,29 +220,12 @@ export default function NuevaInscripcion() {
                 setError(`Complete todos los campos del niño #${i + 1} (cédula, nombres, apellidos).`);
                 return;
             }
-            if (!n.ctaller || !n.ctaller2) {
-                setError(`Seleccione ambos talleres para el niño #${i + 1}.`);
-                return;
-            }
         }
 
         setLoading(true);
         try {
             const result = await post('/inscripciones/crear-completa', {
-                representante: {
-                    cedula: rep.cedula,
-                    nombres: rep.nombres.toUpperCase(),
-                    apellidos: rep.apellidos.toUpperCase(),
-                    direccion: rep.direccion ? rep.direccion.toUpperCase() : null,
-                    email: rep.email || null,
-                    celular: rep.celular || null,
-                    contactoEmergenciaNombre: rep.contactoEmergenciaNombre
-                        ? rep.contactoEmergenciaNombre.toUpperCase() : null,
-                    contactoEmergenciaTelefono: rep.contactoEmergenciaTelefono || null,
-                    estadoCivil: rep.estadoCivil || null,
-                    ocupacion: rep.ocupacion ? rep.ocupacion.toUpperCase() : null,
-                    lugarTrabajo: rep.lugarTrabajo ? rep.lugarTrabajo.toUpperCase() : null,
-                },
+                representante: getRepresentanteEfectivo(),
                 ninos: ninos.map(n => ({
                     cedula: n.cedula,
                     nombres: n.nombres.toUpperCase(),
@@ -207,8 +234,6 @@ export default function NuevaInscripcion() {
                     sexo: n.sexo || null,
                     alergias: n.alergias ? n.alergias.toUpperCase() : null,
                     condicionesMedicas: n.condicionesMedicas ? n.condicionesMedicas.toUpperCase() : null,
-                    ctaller: n.ctaller ? Number(n.ctaller) : null,
-                    ctaller2: n.ctaller2 ? Number(n.ctaller2) : null,
                     bautizado: n.bautizado === 'true',
                     bautizadoFecha: n.bautizadoFecha || null,
                     bautizadoParroquia: n.bautizadoParroquia ? n.bautizadoParroquia.toUpperCase() : null,
@@ -218,20 +243,12 @@ export default function NuevaInscripcion() {
                     nivelCatequesis: n.nivelCatequesis ? Number(n.nivelCatequesis) : null,
                     turno: n.turno ? Number(n.turno) : null,
                 })),
-                padres: padres.filter(p => p.nombre.trim() !== '').map((p, i) => ({
+                padres: padres.filter(p => p.nombres.trim() !== '').map((p, i) => ({
                     tipoPadre: i === 0 ? 'padre' : 'madre',
-                    nombre: p.nombre.toUpperCase(),
+                    nombre: `${p.nombres} ${p.apellidos}`.trim().toUpperCase(),
                     ocupacion: p.ocupacion ? p.ocupacion.toUpperCase() : null,
                     lugarTrabajo: p.lugarTrabajo ? p.lugarTrabajo.toUpperCase() : null,
                     telefono: p.telefono || null,
-                })),
-                fichas: fichas.map(f => ({
-                    sectorResidencia: f.sectorResidencia ? f.sectorResidencia.toUpperCase() : null,
-                    tipoInstitucion: f.tipoInstitucion || null,
-                    institucionEducativa: f.institucionEducativa ? f.institucionEducativa.toUpperCase() : null,
-                    nivelEducativo: f.nivelEducativo || null,
-                    comoConocio: f.comoConocio || null,
-                    comoConocioOtro: f.comoConocio === "Otros" && f.comoConocioOtro ? f.comoConocioOtro.toUpperCase() : null,
                 })),
                 cusuario: 1,
                 ...(eventoActual ? { cevento: eventoActual.id } : {}),
@@ -243,14 +260,12 @@ export default function NuevaInscripcion() {
                 nombres: result.detalles.map(d => d.nombre),
             });
             setStep(0);
-            setRep({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', contactoEmergenciaNombre: '', contactoEmergenciaTelefono: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
+            setRep({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
             setNinos([{ ...emptyNino }]);
-            setFichas([{ ...emptyFicha }]);
             setPadres([{ ...emptyPadre }, { ...emptyPadre }]);
             setRepEncontrado(false);
             setConsultandoCedula(false);
             setNinosDuplicados({});
-            setShowPadres(false);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -325,99 +340,85 @@ export default function NuevaInscripcion() {
 
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
 
-                        {/* Step 0: Representante */}
+                        {/* Step 0: Datos Familiares */}
                         {step === 0 && (
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold text-gray-700">Datos del Representante</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Cédula *</label>
-                                        <div className="relative">
-                                            <input type="text" name="cedula" maxLength={10} value={rep.cedula} onChange={handleRepChange} onBlur={handleCedulaBlur}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                                            {consultandoCedula && (
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full" />
-                                            )}
-                                            {repEncontrado && !consultandoCedula && (
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-xs font-medium">✓</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Nombres *</label>
-                                        <input type="text" name="nombres" value={repEncontrado ? maskText(rep.nombres) : rep.nombres} onChange={handleRepChange}
-                                            readOnly={repEncontrado}
-                                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none transition-colors ${repEncontrado ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}`} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Apellidos *</label>
-                                        <input type="text" name="apellidos" value={repEncontrado ? maskText(rep.apellidos) : rep.apellidos} onChange={handleRepChange}
-                                            readOnly={repEncontrado}
-                                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none transition-colors ${repEncontrado ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}`} />
-                                    </div>
-                                    {repEncontrado && (
-                                        <div className="col-span-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                                            <svg className="h-4 w-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            Persona ya registrada. Solo se solicitan cédula, nombres y apellidos.
-                                        </div>
-                                    )}
-                                    {!repEncontrado && (
-                                        <>
-                                            <Input label="Sector" name="direccion" value={rep.direccion} onChange={handleRepChange} />
-                                            <Input label="Email" name="email" type="email" value={rep.email} onChange={handleRepChange} />
-                                            <Input label="Celular" name="celular" value={rep.celular} onChange={handleRepChange} />
+                            <div className="space-y-5">
+                                {/* --- PADRE --- */}
+                                <ParentSection
+                                    label="Padre"
+                                    data={padres[0]}
+                                    onChange={(field, value) => handlePadreChange(0, field, value)} />
+
+                                {/* --- MADRE --- */}
+                                <ParentSection
+                                    label="Madre"
+                                    data={padres[1]}
+                                    onChange={(field, value) => handlePadreChange(1, field, value)} />
+
+                                {/* --- REPRESENTANTE LEGAL (manual) --- */}
+                                {!padres[0].esRepresentante && !padres[1].esRepresentante && (
+                                    <div className="border-t border-gray-200 pt-4">
+                                        <h3 className="text-lg font-semibold text-gray-700 mb-4">Datos del Representante Legal</h3>
+                                        <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-600 mb-1">Estado Civil</label>
-                                                <select name="estadoCivil" value={rep.estadoCivil} onChange={handleRepChange}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                                                    <option value="">Seleccione</option>
-                                                    <option value="Casados Civil">Casados Civil</option>
-                                                    <option value="Casados Eclesiastico">Casados Eclesiástico</option>
-                                                    <option value="Union Libre">Unión Libre</option>
-                                                    <option value="Divorciado">Divorciado</option>
-                                                    <option value="Viudo">Viudo</option>
-                                                    <option value="Soltero">Soltero</option>
-                                                    <option value="Otro">Otro</option>
-                                                </select>
-                                            </div>
-                                            <Input label="Ocupación" name="ocupacion" value={rep.ocupacion} onChange={handleRepChange} />
-                                            <Input label="Lugar de Trabajo" name="lugarTrabajo" value={rep.lugarTrabajo} onChange={handleRepChange} />
-                                        </>
-                                    )}
-                                </div>
-                                <div className="border-t border-gray-100 pt-4">
-                                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Contacto de Emergencia</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Input label="Nombre" name="contactoEmergenciaNombre" value={rep.contactoEmergenciaNombre} onChange={handleRepChange} />
-                                        <Input label="Teléfono" name="contactoEmergenciaTelefono" value={rep.contactoEmergenciaTelefono} onChange={handleRepChange} />
-                                    </div>
-                                </div>
-                                <div className="border-t border-gray-100 pt-4">
-                                    <button type="button" onClick={() => setShowPadres(!showPadres)}
-                                        className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors">
-                                        <svg className={`h-4 w-4 transition-transform ${showPadres ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
-                                        Datos del Padre y la Madre
-                                    </button>
-                                    {showPadres && (
-                                        <div className="mt-3 space-y-3">
-                                            {['Padre', 'Madre'].map((label, i) => (
-                                                <div key={i} className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                                                    <span className="text-xs font-semibold text-gray-600 mb-2 block">{label}</span>
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <Input label="Nombre" value={padres[i]?.nombre || ''} onChange={(e) => handlePadreChange(i, 'nombre', e.target.value)} />
-                                                        <Input label="Ocupación" value={padres[i]?.ocupacion || ''} onChange={(e) => handlePadreChange(i, 'ocupacion', e.target.value)} />
-                                                        <Input label="Lugar de Trabajo" value={padres[i]?.lugarTrabajo || ''} onChange={(e) => handlePadreChange(i, 'lugarTrabajo', e.target.value)} />
-                                                        <Input label="Teléfono" value={padres[i]?.telefono || ''} onChange={(e) => handlePadreChange(i, 'telefono', e.target.value)} />
-                                                    </div>
+                                                <label className="block text-sm font-medium text-gray-600 mb-1">Cédula *</label>
+                                                <div className="relative">
+                                                    <input type="text" name="cedula" maxLength={10} value={rep.cedula} onChange={handleRepChange} onBlur={handleCedulaBlur}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                                                    {consultandoCedula && (
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full" />
+                                                    )}
+                                                    {repEncontrado && !consultandoCedula && (
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-xs font-medium">✓</span>
+                                                    )}
                                                 </div>
-                                            ))}
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-600 mb-1">Nombres *</label>
+                                                <input type="text" name="nombres" value={repEncontrado ? maskText(rep.nombres) : rep.nombres} onChange={handleRepChange}
+                                                    readOnly={repEncontrado}
+                                                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none transition-colors ${repEncontrado ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}`} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-600 mb-1">Apellidos *</label>
+                                                <input type="text" name="apellidos" value={repEncontrado ? maskText(rep.apellidos) : rep.apellidos} onChange={handleRepChange}
+                                                    readOnly={repEncontrado}
+                                                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none transition-colors ${repEncontrado ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}`} />
+                                            </div>
+                                            {repEncontrado && (
+                                                <div className="col-span-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                                    <svg className="h-4 w-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    Persona ya registrada. Solo se solicitan cédula, nombres y apellidos.
+                                                </div>
+                                            )}
+                                            {!repEncontrado && (
+                                                <>
+                                                    <Input label="Sector" name="direccion" value={rep.direccion} onChange={handleRepChange} />
+                                                    <Input label="Email" name="email" type="email" value={rep.email} onChange={handleRepChange} />
+                                                    <Input label="Celular" name="celular" value={rep.celular} onChange={handleRepChange} />
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-600 mb-1">Estado Civil</label>
+                                                        <select name="estadoCivil" value={rep.estadoCivil} onChange={handleRepChange}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                                            <option value="">Seleccione</option>
+                                                            <option value="Casados Civil">Casados Civil</option>
+                                                            <option value="Casados Eclesiastico">Casados Eclesiástico</option>
+                                                            <option value="Union Libre">Unión Libre</option>
+                                                            <option value="Divorciado">Divorciado</option>
+                                                            <option value="Viudo">Viudo</option>
+                                                            <option value="Soltero">Soltero</option>
+                                                            <option value="Otro">Otro</option>
+                                                        </select>
+                                                    </div>
+                                                    <Input label="Ocupación" name="ocupacion" value={rep.ocupacion} onChange={handleRepChange} />
+                                                    <Input label="Lugar de Trabajo" name="lugarTrabajo" value={rep.lugarTrabajo} onChange={handleRepChange} />
+                                                </>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -489,28 +490,6 @@ export default function NuevaInscripcion() {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                                                 </div>
                                             </div>
-                                            <div className="col-span-2 grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-xs font-medium text-gray-500 mb-1">Taller deportivo *</label>
-                                                    <select name="ctaller" value={nino.ctaller} onChange={(e) => handleNinoChange(idx, e)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                                                        <option value="">Seleccione</option>
-                                                        {talleresDeportivos.filter((t) => t.activo).map((t) => (
-                                                            <option key={t.id} value={t.id}>{t.siglas} — {t.nombre}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-medium text-gray-500 mb-1">Taller áulico *</label>
-                                                    <select name="ctaller2" value={nino.ctaller2} onChange={(e) => handleNinoChange(idx, e)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                                                        <option value="">Seleccione</option>
-                                                        {talleresAulicos.filter((t) => t.activo).map((t) => (
-                                                            <option key={t.id} value={t.id}>{t.siglas} — {t.nombre}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
                                             <div className="col-span-2 border-t border-gray-200 pt-3 mt-2">
                                                 <h5 className="text-xs font-semibold text-gray-600 mb-2">Sacramentos</h5>
                                                 <div className="grid grid-cols-2 gap-3">
@@ -571,67 +550,7 @@ export default function NuevaInscripcion() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="col-span-2 border-t border-gray-200 pt-3 mt-2">
-                                                <h5 className="text-xs font-semibold text-gray-600 mb-2">Ficha Sociodemográfica del Niño</h5>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <Input label="Sector de Residencia" name="sectorResidencia" value={fichas[idx]?.sectorResidencia || ''}
-                                                        onChange={(e) => handleFichaChange(idx, 'sectorResidencia', e.target.value)} />
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Tipo de Institución Educativa</label>
-                                                        <select value={fichas[idx]?.tipoInstitucion || ''} onChange={(e) => handleFichaChange(idx, 'tipoInstitucion', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                                                            <option value="">Seleccione</option>
-                                                            <option value="Fiscal">Fiscal</option>
-                                                            <option value="Fiscomisional">Fiscomisional</option>
-                                                            <option value="Particular">Particular</option>
-                                                            <option value="Municipal">Municipal</option>
-                                                            <option value="Educacion en casa">Educación en casa</option>
-                                                            <option value="No estudia">No estudia</option>
-                                                        </select>
-                                                    </div>
-                                                    <Input label="Institución Educativa" name="institucionEducativa" value={fichas[idx]?.institucionEducativa || ''}
-                                                        onChange={(e) => handleFichaChange(idx, 'institucionEducativa', e.target.value)} />
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Nivel Educativo</label>
-                                                        <select value={fichas[idx]?.nivelEducativo || ''} onChange={(e) => handleFichaChange(idx, 'nivelEducativo', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                                                            <option value="">Seleccione</option>
-                                                            <option value="Inicial">Inicial</option>
-                                                            <option value="1° de basica">1° de basica</option>
-                                                            <option value="2° de basica">2° de basica</option>
-                                                            <option value="3° de basica">3° de basica</option>
-                                                            <option value="4° de basica">4° de basica</option>
-                                                            <option value="5° de basica">5° de basica</option>
-                                                            <option value="6° de basica">6° de basica</option>
-                                                            <option value="7° de basica">7° de basica</option>
-                                                            <option value="8° de basica">8° de basica</option>
-                                                            <option value="9° de basica">9° de basica</option>
-                                                            <option value="10° de basica">10° de basica</option>
-                                                            <option value="1° Bachillerato">1° Bachillerato</option>
-                                                            <option value="2° Bachillerato">2° Bachillerato</option>
-                                                            <option value="3° Bachillerato">3° Bachillerato</option>
-                                                            <option value="No estudia">No estudia</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-gray-500 mb-1">¿Cómo conoció el Oratorio?</label>
-                                                        <select value={fichas[idx]?.comoConocio || ''} onChange={(e) => handleFichaChange(idx, 'comoConocio', e.target.value === "Otros" ? e.target.value : e.target.value)}
-                                                            onBlur={(e) => { if (e.target.value !== "Otros") handleFichaChange(idx, 'comoConocioOtro', ''); }}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                                                            <option value="">Seleccione</option>
-                                                            <option value="Redes sociales">Redes sociales</option>
-                                                            <option value="Contacto">Contacto</option>
-                                                            <option value="Publicidad">Publicidad</option>
-                                                            <option value="Parroquia">Parroquia</option>
-                                                            <option value="Otros">Otros</option>
-                                                        </select>
-                                                        {(fichas[idx]?.comoConocio || '') === "Otros" && (
-                                                            <input type="text" value={fichas[idx]?.comoConocioOtro || ''} onChange={(e) => handleFichaChange(idx, 'comoConocioOtro', e.target.value)}
-                                                                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
+            
                                         </div>
                                         );
                                     })}
@@ -648,25 +567,22 @@ export default function NuevaInscripcion() {
                                 {/* Summary */}
                                 <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
                                     <h4 className="text-sm font-semibold text-blue-800 mb-2">Resumen</h4>
-                                    <p className="text-xs text-blue-700"><strong>Representante:</strong> {rep.nombres} {rep.apellidos} — CI: {rep.cedula}</p>
-                                    {rep.contactoEmergenciaNombre && (
-                                        <p className="text-xs text-blue-700"><strong>Contacto emergencia:</strong> {rep.contactoEmergenciaNombre} — {rep.contactoEmergenciaTelefono}</p>
-                                    )}
-                                    {padres.some(p => p.nombre.trim()) && (
-                                        <p className="text-xs text-blue-700 mt-1"><strong>Padres:</strong> {padres.filter(p => p.nombre.trim()).map(p => p.nombre).join(' / ')}</p>
+                                    <p className="text-xs text-blue-700"><strong>Representante:</strong> {(() => {
+                                        const r = padres[0].esRepresentante ? padres[0] : padres[1].esRepresentante ? padres[1] : rep;
+                                        return `${r.nombres || ''} ${r.apellidos || ''} — CI: ${r.cedula || '—'}`;
+                                    })()}</p>
+                                    {padres.some(p => p.nombres.trim()) && (
+                                        <p className="text-xs text-blue-700 mt-1"><strong>Padres:</strong> {padres.filter(p => p.nombres.trim()).map(p => `${p.nombres} ${p.apellidos}`).join(' / ')}</p>
                                     )}
                                     <p className="text-xs text-blue-700 mt-1"><strong>Niños:</strong></p>
                                     <ul className="list-disc list-inside text-xs text-blue-700 ml-2">
                                         {ninos.map((n, i) => {
-                                            const t1 = n.ctaller ? talleresDeportivos.find(t => t.id === Number(n.ctaller)) : null;
-                                            const t2 = n.ctaller2 ? talleresAulicos.find(t => t.id === Number(n.ctaller2)) : null;
                                             const nc = n.nivelCatequesis ? nivelesCatequesis.find(nc => nc.id === Number(n.nivelCatequesis)) : null;
                                             const tg = n.turno ? turnos.find(t => t.id === Number(n.turno)) : null;
                                             return (
                                             <li key={i}>
                                                 {n.nombres} {n.apellidos} — CI: {n.cedula || '—'}
-                                                {n.sexo ? ` — ${n.sexo === 'M' ? 'Masculino' : 'Femenino}` : ''}
-                                                {t1 ? ` — ${t1.siglas}` : ''}{t2 ? ` + ${t2.siglas}` : ''}
+                                                {n.sexo ? ` — ${n.sexo === 'M' ? 'Masculino' : 'Femenino'}` : ''}
                                                 {nc ? ` — ${nc.nombre}` : ''}
                                                 {tg ? ` (${tg.nombre})` : ''}
                                             </li>
@@ -697,6 +613,54 @@ export default function NuevaInscripcion() {
                         </div>
                     </div>
                 </>
+            )}
+        </div>
+    );
+}
+
+const estadoCivilOptions = [
+    'Casados Civil', 'Casados Eclesiastico', 'Union Libre',
+    'Divorciado', 'Viudo', 'Soltero', 'Otro'
+];
+
+function ParentSection({ label, data, onChange }) {
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-700">{`Datos del ${label}`}</span>
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                    <input type="checkbox" checked={data.esRepresentante}
+                        onChange={() => onChange('esRepresentante', !data.esRepresentante)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    Actúa como representante legal
+                </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <Input label="Nombres" value={data.nombres} onChange={(e) => onChange('nombres', e.target.value)} />
+                <Input label="Apellidos" value={data.apellidos} onChange={(e) => onChange('apellidos', e.target.value)} />
+                <Input label="Ocupación" value={data.ocupacion} onChange={(e) => onChange('ocupacion', e.target.value)} />
+                <Input label="Lugar de Trabajo" value={data.lugarTrabajo} onChange={(e) => onChange('lugarTrabajo', e.target.value)} />
+                <Input label="Teléfono" value={data.telefono} onChange={(e) => onChange('telefono', e.target.value)} />
+            </div>
+            {data.esRepresentante && (
+                <div className="border-t border-gray-100 pt-3 space-y-3">
+                    <span className="text-xs font-semibold text-gray-600 block">Datos del Representante Legal</span>
+                    <div className="grid grid-cols-2 gap-3">
+                        <Input label="Cédula *" value={data.cedula} onChange={(e) => onChange('cedula', e.target.value)} />
+                        <Input label="Email" type="email" value={data.email} onChange={(e) => onChange('email', e.target.value)} />
+                        <Input label="Sector" value={data.direccion} onChange={(e) => onChange('direccion', e.target.value)} />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Estado Civil</label>
+                            <select value={data.estadoCivil} onChange={(e) => onChange('estadoCivil', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                <option value="">Seleccione</option>
+                                {estadoCivilOptions.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

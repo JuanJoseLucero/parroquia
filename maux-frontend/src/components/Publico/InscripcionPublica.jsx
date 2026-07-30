@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 const API_BASE = import.meta.env.PROD
   ? "/api"
-  : "/maux-backend/api";
+  : "/maux-backend_catequesis/api";
 
 async function post(endpoint, body = {}) {
   const res = await fetch(`${API_BASE}${endpoint}`, {

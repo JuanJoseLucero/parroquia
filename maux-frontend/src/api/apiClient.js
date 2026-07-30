@@ -2,7 +2,7 @@ import keycloak from '../keycloak';
 
 const API_BASE = import.meta.env.PROD
     ? '/api'
-    : '/maux-backend/api';
+    : '/maux-backend_catequesis/api';
 
 export async function post(endpoint, body = {}) {
     const headers = { 'Content-Type': 'application/json' };

@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      "/maux-backend": {
+      "/maux-backend_catequesis": {
         target: "http://localhost:8080",
         changeOrigin: true,
       },
