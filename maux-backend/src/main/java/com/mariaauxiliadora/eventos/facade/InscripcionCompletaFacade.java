@@ -30,6 +30,16 @@ public class InscripcionCompletaFacade {
         JsonArray ninosJson = json.getJsonArray("ninos");
         int cusuario = json.getInt("cusuario", 1);
         Integer cevento = hasValue(json, "cevento") ? json.getInt("cevento") : null;
+        if (cevento == null) {
+            throw new IllegalArgumentException("El evento de la inscripción es obligatorio: no hay un evento activo configurado para el año actual.");
+        }
+        Evento evento = em.createQuery(
+            "SELECT e FROM Evento e WHERE e.id = :cevento AND e.activo = true",
+            Evento.class
+        ).setParameter("cevento", cevento).getResultStream().findFirst().orElse(null);
+        if (evento == null) {
+            throw new IllegalArgumentException("El evento indicado no existe o no está activo.");
+        }
 
         String repCedula = getString(repJson, "cedula");
 
@@ -88,6 +98,8 @@ public class InscripcionCompletaFacade {
         // 3.1 Padres (padre y madre) si se envían
         JsonArray padresJson = json.containsKey("padres") && !json.isNull("padres")
             ? json.getJsonArray("padres") : null;
+        Integer idPadre = null;
+        Integer idMadre = null;
         if (padresJson != null) {
             for (int p = 0; p < padresJson.size(); p++) {
                 JsonObject padreJson = padresJson.getJsonObject(p);
@@ -119,6 +131,12 @@ public class InscripcionCompletaFacade {
                 padre.setLugarTrabajo(getString(padreJson, "lugarTrabajo"));
                 padre.setActivo(true);
                 em.persist(padre);
+
+                if ("padre".equals(tipoPadre)) {
+                    idPadre = padre.getId();
+                } else if ("madre".equals(tipoPadre)) {
+                    idMadre = padre.getId();
+                }
             }
         }
 
@@ -178,6 +196,9 @@ public class InscripcionCompletaFacade {
             ninio.setCondicionesMedicas(getString(ninJson, "condicionesMedicas"));
             ninio.setCtallerDeportivo(hasValue(ninJson, "ctaller") ? getInt(ninJson, "ctaller") : null);
             ninio.setCtallerAulico(hasValue(ninJson, "ctaller2") ? getInt(ninJson, "ctaller2") : null);
+            ninio.setCpadre(idPadre);
+            ninio.setCmadre(idMadre);
+            ninio.setCrepresentante(representante.getId());
             ninio.setActivo(true);
             em.persist(ninio);
 

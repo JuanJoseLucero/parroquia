@@ -51,6 +51,8 @@ const emptyPadre = {
     estadoCivil: ''
 };
 
+const emptyFicha = { tipoInstitucion: '', institucionEducativa: '', nivelEducativo: '' };
+
 const maskText = (text) => {
     if (!text || text.length <= 2) return text || '';
     return text[0] + '*'.repeat(Math.min(text.length - 2, 6)) + text[text.length - 1];
@@ -69,6 +71,7 @@ export default function NuevaInscripcion() {
     const [turnos, setTurnos] = useState([]);
     const [eventoActual, setEventoActual] = useState(null);
     const [padres, setPadres] = useState([{ ...emptyPadre }, { ...emptyPadre }]);
+    const [fichas, setFichas] = useState([{ ...emptyFicha }]);
 
     const [repEncontrado, setRepEncontrado] = useState(false);
     const [consultandoCedula, setConsultandoCedula] = useState(false);
@@ -182,12 +185,18 @@ export default function NuevaInscripcion() {
         setNinos(updated);
     };
 
+    const handleFichaChange = (index, field, value) => {
+        setFichas(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
+    };
+
     const addNino = () => {
         setNinos([...ninos, { ...emptyNino }]);
+        setFichas([...fichas, { ...emptyFicha }]);
     };
     const removeNino = (index) => {
         if (ninos.length === 1) return;
         setNinos(ninos.filter((_, i) => i !== index));
+        setFichas(fichas.filter((_, i) => i !== index));
     };
 
     const nextStep = () => {
@@ -265,6 +274,11 @@ export default function NuevaInscripcion() {
         setError(null);
         setSuccess(null);
 
+        if (!eventoActual) {
+            setError('No hay un evento activo configurado para realizar la inscripción.');
+            return;
+        }
+
         for (let i = 0; i < ninos.length; i++) {
             const n = ninos[i];
             if (!n.cedula || !n.nombres || !n.apellidos) {
@@ -294,6 +308,11 @@ export default function NuevaInscripcion() {
                     nivelCatequesis: n.nivelCatequesis ? Number(n.nivelCatequesis) : null,
                     turno: n.turno ? Number(n.turno) : null,
                 })),
+                fichas: fichas.map(f => ({
+                    tipoInstitucion: f.tipoInstitucion || null,
+                    institucionEducativa: f.institucionEducativa ? f.institucionEducativa.toUpperCase() : null,
+                    nivelEducativo: f.nivelEducativo || null,
+                })),
                 padres: padres.filter(p => p.nombres.trim() !== '').map((p, i) => ({
                     tipoPadre: i === 0 ? 'padre' : 'madre',
                     cedula: p.cedula || null,
@@ -303,7 +322,7 @@ export default function NuevaInscripcion() {
                     telefono: p.telefono || null,
                 })),
                 cusuario: 1,
-                ...(eventoActual ? { cevento: eventoActual.id } : {}),
+                cevento: eventoActual.id,
             });
 
             setSuccess({
@@ -314,6 +333,7 @@ export default function NuevaInscripcion() {
             setStep(0);
             setRep({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
             setNinos([{ ...emptyNino }]);
+            setFichas([{ ...emptyFicha }]);
             setPadres([{ ...emptyPadre }, { ...emptyPadre }]);
             setRepEncontrado(false);
             setConsultandoCedula(false);
@@ -600,7 +620,49 @@ export default function NuevaInscripcion() {
                                                     </div>
                                                 </div>
                                             </div>
-            
+                                            <div className="col-span-2 border-t border-gray-200 pt-3 mt-2">
+                                                <h5 className="text-xs font-semibold text-gray-600 mb-2">Datos Educativos</h5>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Tipo de Institución Educativa</label>
+                                                        <select value={fichas[idx]?.tipoInstitucion || ''} onChange={(e) => handleFichaChange(idx, 'tipoInstitucion', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                                            <option value="">Seleccione</option>
+                                                            <option value="Fiscal">Fiscal</option>
+                                                            <option value="Fiscomisional">Fiscomisional</option>
+                                                            <option value="Particular">Particular</option>
+                                                            <option value="Municipal">Municipal</option>
+                                                            <option value="Educacion en casa">Educación en casa</option>
+                                                            <option value="No estudia">No estudia</option>
+                                                        </select>
+                                                    </div>
+                                                    <Input label="Institución Educativa" name="institucionEducativa" value={fichas[idx]?.institucionEducativa || ''}
+                                                        onChange={(e) => handleFichaChange(idx, 'institucionEducativa', e.target.value)} />
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Nivel Educativo</label>
+                                                        <select value={fichas[idx]?.nivelEducativo || ''} onChange={(e) => handleFichaChange(idx, 'nivelEducativo', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                                                            <option value="">Seleccione</option>
+                                                            <option value="Inicial">Inicial</option>
+                                                            <option value="1° de basica">1° de basica</option>
+                                                            <option value="2° de basica">2° de basica</option>
+                                                            <option value="3° de basica">3° de basica</option>
+                                                            <option value="4° de basica">4° de basica</option>
+                                                            <option value="5° de basica">5° de basica</option>
+                                                            <option value="6° de basica">6° de basica</option>
+                                                            <option value="7° de basica">7° de basica</option>
+                                                            <option value="8° de basica">8° de basica</option>
+                                                            <option value="9° de basica">9° de basica</option>
+                                                            <option value="10° de basica">10° de basica</option>
+                                                            <option value="1° Bachillerato">1° Bachillerato</option>
+                                                            <option value="2° Bachillerato">2° Bachillerato</option>
+                                                            <option value="3° Bachillerato">3° Bachillerato</option>
+                                                            <option value="No estudia">No estudia</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                         </div>
                                         );
                                     })}

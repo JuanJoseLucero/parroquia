@@ -32,6 +32,15 @@ public class Ninio implements Serializable {
     @Column(name = "ctaller_aulico")
     private Integer ctallerAulico;
 
+    @Column(name = "cpadre")
+    private Integer cpadre;
+
+    @Column(name = "cmadre")
+    private Integer cmadre;
+
+    @Column(name = "crepresentante")
+    private Integer crepresentante;
+
     @Column(nullable = false)
     private Boolean activo = true;
 
@@ -59,6 +68,15 @@ public class Ninio implements Serializable {
 
     public Integer getCtallerAulico() { return ctallerAulico; }
     public void setCtallerAulico(Integer ctallerAulico) { this.ctallerAulico = ctallerAulico; }
+
+    public Integer getCpadre() { return cpadre; }
+    public void setCpadre(Integer cpadre) { this.cpadre = cpadre; }
+
+    public Integer getCmadre() { return cmadre; }
+    public void setCmadre(Integer cmadre) { this.cmadre = cmadre; }
+
+    public Integer getCrepresentante() { return crepresentante; }
+    public void setCrepresentante(Integer crepresentante) { this.crepresentante = crepresentante; }
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
