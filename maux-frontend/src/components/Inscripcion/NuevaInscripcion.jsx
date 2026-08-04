@@ -36,13 +36,14 @@ function getRangoEdad(edad) {
 const onlyAlpha = (v) => v.replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/g, '');
 const onlyDigits = (v) => v.replace(/\D/g, '');
 const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+const upper = (v) => v ? v.toUpperCase() : null;
 
 const STEPS = ['Datos Familiares', 'Niños'];
 const emptyNino = {
     cedula: '', nombres: '', apellidos: '', fechaNacimiento: '', sexo: '', alergias: '', condicionesMedicas: '',
     bautizado: '', bautizadoFecha: '', bautizadoParroquia: '',
     eucaristia: '', eucaristiaFecha: '', eucaristiaParroquia: '',
-    nivelCatequesis: '', turno: ''
+    nivelCatequesis: '', turno: '', catequistaAnterior: '', parroquiaAnterior: ''
 };
 const emptyPadre = {
     nombres: '', apellidos: '', ocupacion: '', lugarTrabajo: '', telefono: '',
@@ -237,8 +238,8 @@ export default function NuevaInscripcion() {
     const getRepresentanteEfectivo = () => {
         if (padres[0].esRepresentante) return {
             cedula: padres[0].cedula,
-            nombres: padres[0].nombres.toUpperCase(),
-            apellidos: padres[0].apellidos.toUpperCase(),
+            nombres: upper(padres[0].nombres),
+            apellidos: upper(padres[0].apellidos),
             direccion: padres[0].direccion ? padres[0].direccion.toUpperCase() : null,
             email: padres[0].email || null,
             celular: padres[0].celular || padres[0].telefono || null,
@@ -248,8 +249,8 @@ export default function NuevaInscripcion() {
         };
         if (padres[1].esRepresentante) return {
             cedula: padres[1].cedula,
-            nombres: padres[1].nombres.toUpperCase(),
-            apellidos: padres[1].apellidos.toUpperCase(),
+            nombres: upper(padres[1].nombres),
+            apellidos: upper(padres[1].apellidos),
             direccion: padres[1].direccion ? padres[1].direccion.toUpperCase() : null,
             email: padres[1].email || null,
             celular: padres[1].celular || padres[1].telefono || null,
@@ -259,8 +260,8 @@ export default function NuevaInscripcion() {
         };
         return {
             cedula: rep.cedula,
-            nombres: rep.nombres.toUpperCase(),
-            apellidos: rep.apellidos.toUpperCase(),
+            nombres: upper(rep.nombres),
+            apellidos: upper(rep.apellidos),
             direccion: rep.direccion ? rep.direccion.toUpperCase() : null,
             email: rep.email || null,
             celular: rep.celular || null,
@@ -293,8 +294,8 @@ export default function NuevaInscripcion() {
                 representante: getRepresentanteEfectivo(),
                 ninos: ninos.map(n => ({
                     cedula: n.cedula,
-                    nombres: n.nombres.toUpperCase(),
-                    apellidos: n.apellidos.toUpperCase(),
+                    nombres: upper(n.nombres),
+                    apellidos: upper(n.apellidos),
                     fechaNacimiento: n.fechaNacimiento || null,
                     sexo: n.sexo || null,
                     alergias: n.alergias ? n.alergias.toUpperCase() : null,
@@ -307,6 +308,8 @@ export default function NuevaInscripcion() {
                     eucaristiaParroquia: n.eucaristiaParroquia ? n.eucaristiaParroquia.toUpperCase() : null,
                     nivelCatequesis: n.nivelCatequesis ? Number(n.nivelCatequesis) : null,
                     turno: n.turno ? Number(n.turno) : null,
+                    catequistaAnterior: n.catequistaAnterior ? n.catequistaAnterior.toUpperCase() : null,
+                    parroquiaAnterior: n.parroquiaAnterior ? n.parroquiaAnterior.toUpperCase() : null,
                 })),
                 fichas: fichas.map(f => ({
                     tipoInstitucion: f.tipoInstitucion || null,
@@ -618,6 +621,8 @@ export default function NuevaInscripcion() {
                                                             ))}
                                                         </select>
                                                     </div>
+                                                    <Input label="Catequista anterior" name="catequistaAnterior" value={nino.catequistaAnterior} onChange={(e) => handleNinoChange(idx, e)} />
+                                                    <Input label="Parroquia anterior" name="parroquiaAnterior" value={nino.parroquiaAnterior} onChange={(e) => handleNinoChange(idx, e)} />
                                                 </div>
                                             </div>
                                             <div className="col-span-2 border-t border-gray-200 pt-3 mt-2">

@@ -52,6 +52,8 @@ const emptyNino = {
   eucaristiaParroquia: "",
   nivelCatequesis: "",
   turno: "",
+  catequistaAnterior: "",
+  parroquiaAnterior: "",
 };
 
 const emptyFicha = { sectorResidencia: "", tipoInstitucion: "", institucionEducativa: "", nivelEducativo: "", comoConocio: "", comoConocioOtro: "" };
@@ -283,6 +285,8 @@ export default function InscripcionPublica() {
             eucaristiaParroquia: n.eucaristiaParroquia ? n.eucaristiaParroquia.toUpperCase() : null,
             nivelCatequesis: n.nivelCatequesis ? Number(n.nivelCatequesis) : null,
             turno: n.turno ? Number(n.turno) : null,
+            catequistaAnterior: n.catequistaAnterior ? n.catequistaAnterior.toUpperCase() : null,
+            parroquiaAnterior: n.parroquiaAnterior ? n.parroquiaAnterior.toUpperCase() : null,
           }))
           .filter((_, i) => !ninosDuplicados[i]),
         padres: padres.filter(p => p.nombre.trim() !== '').map((p, i) => ({
@@ -916,6 +920,16 @@ export default function InscripcionPublica() {
                                 <option key={t.id} value={t.id}>{t.nombre}</option>
                               ))}
                             </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Catequista anterior</label>
+                            <input type="text" name="catequistaAnterior" value={nino.catequistaAnterior} onChange={(e) => handleNinoChange(idx, e)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Parroquia anterior</label>
+                            <input type="text" name="parroquiaAnterior" value={nino.parroquiaAnterior} onChange={(e) => handleNinoChange(idx, e)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                           </div>
                         </div>
                       </div>

@@ -23,6 +23,12 @@ public class InscripcionDetalle implements Serializable {
     @Column(name = "cnivelcatequesis")
     private Integer cnivelcatequesis;
 
+    @Column(name = "catequista_anterior")
+    private String catequistaAnterior;
+
+    @Column(name = "parroquia_anterior")
+    private String parroquiaAnterior;
+
     @Column(nullable = false)
     private Boolean activo = true;
 
@@ -44,4 +50,10 @@ public class InscripcionDetalle implements Serializable {
 
     public Integer getCnivelcatequesis() { return cnivelcatequesis; }
     public void setCnivelcatequesis(Integer cnivelcatequesis) { this.cnivelcatequesis = cnivelcatequesis; }
+
+    public String getCatequistaAnterior() { return catequistaAnterior; }
+    public void setCatequistaAnterior(String catequistaAnterior) { this.catequistaAnterior = catequistaAnterior; }
+
+    public String getParroquiaAnterior() { return parroquiaAnterior; }
+    public void setParroquiaAnterior(String parroquiaAnterior) { this.parroquiaAnterior = parroquiaAnterior; }
 }
