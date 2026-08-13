@@ -56,7 +56,7 @@ public class InscripcionConsultaFacade {
         String jpql = "SELECT d.id, d.cinscripcionCabecera, d.tninio, " +
                       "p.nombres, p.apellidos, p.cedula, " +
                       "d.cestadoinscripcion, c.id AS cabeceraId, " +
-                      "n.cgrupo " +
+                      "c.notas " +
                       "FROM InscripcionDetalle d, Ninio n, Persona p, InscripcionCabecera c " +
                       "WHERE d.tninio = n.id AND n.cpersona = p.id " +
                       "AND d.cinscripcionCabecera = c.id " +
@@ -100,6 +100,7 @@ public class InscripcionConsultaFacade {
             item.put("totalPagado", totalPagado);
             item.put("costo", costoBase);
             item.put("pendiente", costoBase.subtract(totalPagado));
+            item.put("notas", (String) row[8]);
             result.add(item);
         }
         return result;

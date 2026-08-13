@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { personaService, ninioService, grupoService } from '../../api/services/personaService';
+import { personaService, ninioService } from '../../api/services/personaService';
 import { inscripcionCabeceraService, inscripcionDetalleService, pagoService, costoInscripcionService } from '../../api/services/inscripcionService';
 import { formatMoney, formatDate, ESTADOS_INSCRIPCION } from '../../utils/formatters';
 
@@ -15,10 +16,9 @@ function calcularEdad(fechaNacimiento) {
 }
 
 export default function ListarParticipantes() {
+    const navigate = useNavigate();
     const [data, setData] = useState([]);
     const [filteredRows, setFilteredRows] = useState([]);
-    const [grupos, setGrupos] = useState([]);
-    const [filterGrupo, setFilterGrupo] = useState('');
     const [filterEstado, setFilterEstado] = useState('');
     const [filterEdad, setFilterEdad] = useState('');
     const [search, setSearch] = useState('');
@@ -41,17 +41,15 @@ export default function ListarParticipantes() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const [detallesRes, cabecerasRes, niniosRes, personasRes, gruposRes, pagosRes, costosRes] = await Promise.all([
+            const [detallesRes, cabecerasRes, niniosRes, personasRes, pagosRes, costosRes] = await Promise.all([
                 inscripcionDetalleService.listarAdmin(0, 5000),
                 inscripcionCabeceraService.listarAdmin(0, 5000),
                 ninioService.listarAdmin(0, 5000),
                 personaService.listarAdmin(0, 5000),
-                grupoService.listar(),
                 pagoService.listarAdmin(0, 5000),
                 costoInscripcionService.listar(),
             ]);
 
-            setGrupos(gruposRes?.data || []);
             setCosto((costosRes?.data?.[0]?.monto) || 15);
 
             const personList = personasRes?.data || [];
@@ -77,19 +75,17 @@ export default function ListarParticipantes() {
                     nombre: `${persona.nombres} ${persona.apellidos}`,
                     fechaNacimiento: persona.fechaNacimiento || null,
                     edad,
-                    grupoId: ninio.cgrupo,
-                    grupo: (gruposRes?.data || []).find(g => g.id === ninio.cgrupo)?.nombreGrupo || '',
                     estadoId: d.cestadoinscripcion,
                     estado: ESTADOS_INSCRIPCION[d.cestadoinscripcion] || 'Desconocido',
                     totalPagado,
                     pendiente: Math.max(0, ((costosRes?.data?.[0]?.monto) || 15) - totalPagado),
                     cabeceraId: cabecera?.id,
+                    notas: cabecera?.notas || '',
                 };
             };
 
             let rows = detalles.map(buildRow).filter(Boolean);
 
-            if (filterGrupo) rows = rows.filter(r => r.grupoId === parseInt(filterGrupo));
             if (filterEstado) rows = rows.filter(r => r.estadoId === parseInt(filterEstado));
             if (filterEdad) {
                 const selectedGroup = AGE_GROUPS.find(group => group.value === filterEdad);
@@ -108,20 +104,20 @@ export default function ListarParticipantes() {
         } finally {
             setLoading(false);
         }
-    }, [page, filterGrupo, filterEstado, filterEdad, search]);
+    }, [page, filterEstado, filterEdad, search]);
 
     useEffect(() => { load(); }, [load]);
 
     const totalPages = Math.ceil(total / PAGE_SIZE);
 
     const exportExcel = () => {
-        const headers = ['Cédula', 'Nombre', 'Fecha Nacimiento', 'Edad', 'Grupo'];
+        const headers = ['Cédula', 'Nombre', 'Fecha Nacimiento', 'Edad', 'Observaciones'];
         const mapRows = (rows) => rows.map(r => [
             r.cedula,
             r.nombre,
             formatDate(r.fechaNacimiento),
             r.edad ?? '',
-            r.grupo,
+            r.notas || '',
         ]);
 
         const wb = XLSX.utils.book_new();
@@ -148,14 +144,6 @@ export default function ListarParticipantes() {
                         <label className="block text-xs font-medium text-gray-500 mb-1">Buscar</label>
                         <input type="text" placeholder="Nombre o cédula" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Grupo</label>
-                        <select value={filterGrupo} onChange={e => { setFilterGrupo(e.target.value); setPage(0); }}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">Todos</option>
-                            {grupos.map(g => <option key={g.id} value={g.id}>{g.nombreGrupo}</option>)}
-                        </select>
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
@@ -197,23 +185,23 @@ export default function ListarParticipantes() {
                                 <th className="text-left py-3 px-4">Cédula</th>
                                 <th className="text-left py-3 px-4">Nombres</th>
                                 <th className="text-left py-3 px-4">Edad</th>
-                                <th className="text-left py-3 px-4">Grupo</th>
                                 <th className="text-left py-3 px-4">Estado</th>
                                 <th className="text-right py-3 px-4">Pagado</th>
                                 <th className="text-right py-3 px-4">Pendiente</th>
+                                <th className="text-left py-3 px-4">Observaciones</th>
+                                <th className="text-left py-3 px-4">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={7} className="text-center py-8 text-gray-400">Cargando...</td></tr>
+                                <tr><td colSpan={8} className="text-center py-8 text-gray-400">Cargando...</td></tr>
                             ) : data.length === 0 ? (
-                                <tr><td colSpan={7} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
+                                <tr><td colSpan={8} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
                             ) : data.map(r => (
                                 <tr key={r.id} className="border-b hover:bg-gray-50 transition-colors">
                                     <td className="py-3 px-4 font-mono">{r.cedula}</td>
                                     <td className="py-3 px-4 font-medium">{r.nombre}</td>
                                     <td className="py-3 px-4">{r.edad ?? '-'}</td>
-                                    <td className="py-3 px-4">{r.grupo}</td>
                                     <td className="py-3 px-4">
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                             r.estadoId === 2 ? 'bg-green-100 text-green-700' :
@@ -224,6 +212,21 @@ export default function ListarParticipantes() {
                                     </td>
                                     <td className="py-3 px-4 text-right">{formatMoney(r.totalPagado)}</td>
                                     <td className="py-3 px-4 text-right font-medium text-red-600">{formatMoney(r.pendiente)}</td>
+                                    <td className="py-3 px-4 max-w-[200px]">
+                                        {r.notas ? (
+                                            <span title={r.notas} className="block truncate text-gray-600">{r.notas}</span>
+                                        ) : (
+                                            <span className="text-gray-300">-</span>
+                                        )}
+                                    </td>
+                                    <td className="py-3 px-4">
+                                        {r.cabeceraId && (
+                                            <button onClick={() => navigate(`/inscripciones/editar/${r.cabeceraId}`)}
+                                                className="px-3 py-1 text-xs text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors">
+                                                Editar
+                                            </button>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

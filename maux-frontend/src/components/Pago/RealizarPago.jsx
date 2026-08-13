@@ -186,6 +186,11 @@ export default function RealizarPago() {
                             const pen = Math.max(0, (detalle.costo || costoTotal) - (detalle.totalPagado || 0));
                             return <p className={`text-sm font-semibold ${pen > 0 ? 'text-red-600' : 'text-green-600'}`}>Pendiente: {formatMoney(pen)}</p>;
                         })()}
+                        {detalle.notas ? (
+                            <p className="text-sm text-gray-600 mt-2 pt-2 border-t border-gray-200">
+                                <span className="font-medium">Observaciones:</span> {detalle.notas}
+                            </p>
+                        ) : null}
                     </div>
 
                     {pagosPrevios.length > 0 ? (

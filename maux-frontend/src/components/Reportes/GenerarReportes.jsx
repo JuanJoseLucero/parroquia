@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { personaService, ninioService, grupoService } from '../../api/services/personaService';
+import { personaService, ninioService } from '../../api/services/personaService';
 import { inscripcionCabeceraService, inscripcionDetalleService, pagoService, costoInscripcionService, asistenciaService, fechaCalendarioService } from '../../api/services/inscripcionService';
 import { formatMoney, ESTADOS_INSCRIPCION } from '../../utils/formatters';
 import jsPDF from 'jspdf';
@@ -9,24 +9,22 @@ import * as XLSX from 'xlsx';
 export default function GenerarReportes() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [filtro, setFiltro] = useState({ grupo: '', estado: '' });
+    const [filtro, setFiltro] = useState({ estado: '' });
 
     const load = async () => {
         setLoading(true);
         try {
-            const [detallesRes, cabecerasRes, niniosRes, personasRes, gruposRes, pagosRes, costosRes, asistenciaRes, fechasRes] = await Promise.all([
+            const [detallesRes, cabecerasRes, niniosRes, personasRes, pagosRes, costosRes, asistenciaRes, fechasRes] = await Promise.all([
                 inscripcionDetalleService.listarAdmin(0, 5000),
                 inscripcionCabeceraService.listarAdmin(0, 5000),
                 ninioService.listarAdmin(0, 5000),
                 personaService.listarAdmin(0, 5000),
-                grupoService.listar(),
                 pagoService.listarAdmin(0, 5000),
                 costoInscripcionService.listar(),
                 asistenciaService.listarAdmin(0, 5000),
                 fechaCalendarioService.listar(),
             ]);
 
-            const grupos = gruposRes?.data || [];
             const personas = personasRes?.data || [];
             const ninios = niniosRes?.data || [];
             const detalles = detallesRes?.data || [];
@@ -44,12 +42,11 @@ export default function GenerarReportes() {
                 return {
                     nombre: persona ? `${persona.nombres} ${persona.apellidos}` : '',
                     cedula: persona?.cedula || '',
-                    grupo: ninio ? (grupos.find(g => g.id === ninio.cgrupo)?.nombreGrupo || '') : '',
                     estado: ESTADOS_INSCRIPCION[d.cestadoinscripcion] || '',
                     estadoId: d.cestadoinscripcion,
                     totalPagado,
                     pendiente: Math.max(0, costo - totalPagado),
-                    grupoId: ninio?.cgrupo,
+                    notas: cabecera?.notas || '',
                 };
             });
 
@@ -57,7 +54,7 @@ export default function GenerarReportes() {
             const totalCosto = participantes.length * costo;
             const resumen = { totalParticipantes: participantes.length, totalRecaudado, totalPendiente: totalCosto - totalRecaudado, costo };
 
-            setData({ participantes, grupos, resumen, asistencias, fechas });
+            setData({ participantes, resumen, asistencias, fechas });
         } catch (e) {
             console.error(e);
         } finally {
@@ -70,7 +67,6 @@ export default function GenerarReportes() {
     const filtered = () => {
         if (!data) return [];
         let rows = data.participantes;
-        if (filtro.grupo) rows = rows.filter(r => r.grupoId === parseInt(filtro.grupo));
         if (filtro.estado) rows = rows.filter(r => r.estadoId === parseInt(filtro.estado));
         return rows;
     };
@@ -84,15 +80,15 @@ export default function GenerarReportes() {
         doc.text(`Total participantes: ${rows.length} | Recaudado: ${formatMoney(data?.resumen?.totalRecaudado)} | Pendiente: ${formatMoney(data?.resumen?.totalPendiente)}`, 14, 28);
         doc.autoTable({
             startY: 34,
-            head: [['Cédula', 'Nombre', 'Grupo', 'Estado', 'Pagado', 'Pendiente']],
-            body: rows.map(r => [String(r.cedula), r.nombre, r.grupo, r.estado, formatMoney(r.totalPagado), formatMoney(r.pendiente)]),
+            head: [['Cédula', 'Nombre', 'Estado', 'Pagado', 'Pendiente', 'Observaciones']],
+            body: rows.map(r => [String(r.cedula), r.nombre, r.estado, formatMoney(r.totalPagado), formatMoney(r.pendiente), r.notas || '']),
         });
         doc.save('reporte-inscripciones.pdf');
     };
 
     const exportExcel = () => {
         const rows = filtered();
-        const wsData = [['Cédula', 'Nombre', 'Grupo', 'Estado', 'Pagado', 'Pendiente'], ...rows.map(r => [r.cedula, r.nombre, r.grupo, r.estado, r.totalPagado, r.pendiente])];
+        const wsData = [['Cédula', 'Nombre', 'Estado', 'Pagado', 'Pendiente', 'Observaciones'], ...rows.map(r => [r.cedula, r.nombre, r.estado, r.totalPagado, r.pendiente, r.notas || ''])];
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Participantes');
@@ -105,14 +101,6 @@ export default function GenerarReportes() {
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
                 <div className="flex flex-wrap items-end gap-4">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Grupo</label>
-                        <select value={filtro.grupo} onChange={e => setFiltro({ ...filtro, grupo: e.target.value })}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">Todos</option>
-                            {(data?.grupos || []).map(g => <option key={g.id} value={g.id}>{g.nombreGrupo}</option>)}
-                        </select>
-                    </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
                         <select value={filtro.estado} onChange={e => setFiltro({ ...filtro, estado: e.target.value })}
@@ -158,10 +146,10 @@ export default function GenerarReportes() {
                                     <tr>
                                         <th className="text-left py-3 px-4">Cédula</th>
                                         <th className="text-left py-3 px-4">Nombre</th>
-                                        <th className="text-left py-3 px-4">Grupo</th>
                                         <th className="text-left py-3 px-4">Estado</th>
                                         <th className="text-right py-3 px-4">Pagado</th>
                                         <th className="text-right py-3 px-4">Pendiente</th>
+                                        <th className="text-left py-3 px-4">Observaciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -169,7 +157,6 @@ export default function GenerarReportes() {
                                         <tr key={i} className="border-b hover:bg-gray-50">
                                             <td className="py-2 px-4 font-mono">{r.cedula}</td>
                                             <td className="py-2 px-4">{r.nombre}</td>
-                                            <td className="py-2 px-4">{r.grupo}</td>
                                             <td className="py-2 px-4">
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                                     r.estadoId === 2 ? 'bg-green-100 text-green-700' :
@@ -179,6 +166,13 @@ export default function GenerarReportes() {
                                             </td>
                                             <td className="py-2 px-4 text-right">{formatMoney(r.totalPagado)}</td>
                                             <td className="py-2 px-4 text-right text-red-600 font-medium">{formatMoney(r.pendiente)}</td>
+                                            <td className="py-2 px-4 max-w-[200px]">
+                                                {r.notas ? (
+                                                    <span title={r.notas} className="block truncate text-gray-600">{r.notas}</span>
+                                                ) : (
+                                                    <span className="text-gray-300">-</span>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

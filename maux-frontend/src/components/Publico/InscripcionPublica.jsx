@@ -42,8 +42,6 @@ const emptyNino = {
   sexo: "",
   alergias: "",
   condicionesMedicas: "",
-  ctaller: "",
-  ctaller2: "",
   bautizado: "",
   bautizadoFecha: "",
   bautizadoParroquia: "",
@@ -56,7 +54,7 @@ const emptyNino = {
   parroquiaAnterior: "",
 };
 
-const emptyFicha = { sectorResidencia: "", tipoInstitucion: "", institucionEducativa: "", nivelEducativo: "", comoConocio: "", comoConocioOtro: "" };
+const emptyFicha = { sectorResidencia: "", tipoInstitucion: "", institucionEducativa: "", nivelEducativo: "" };
 
 const emptyPadre = { nombre: "", ocupacion: "", lugarTrabajo: "", telefono: "" };
 
@@ -78,8 +76,6 @@ export default function InscripcionPublica() {
   });
   const [ninos, setNinos] = useState([{ ...emptyNino }]);
   const [fichas, setFichas] = useState([{ ...emptyFicha }]);
-  const [talleresDeportivos, setTalleresDeportivos] = useState([]);
-  const [talleresAulicos, setTalleresAulicos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
@@ -103,14 +99,6 @@ export default function InscripcionPublica() {
   const [aceptoTerminos, setAceptoTerminos] = useState(false);
   const [showTermsWarning, setShowTermsWarning] = useState(false);
   const [showModal, setShowModal] = useState(false);
-
-  useEffect(() => {
-    post("/talleres/por-tipo", { tipo: "deportivo"}).then(setTalleresDeportivos).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    post("/talleres/por-tipo", { tipo: "aulico"}).then(setTalleresAulicos).catch(() => {});
-  }, []);
 
   useEffect(() => {
     post("/niveles-catequesis/listar", { page: 0, size: 100 }).then(res => setNivelesCatequesis(res.data || [])).catch(() => {});
@@ -233,10 +221,6 @@ export default function InscripcionPublica() {
           setError(`Seleccione el sexo del niño #${i + 1}.`);
           return;
         }
-        if (!n.ctaller || !n.ctaller2) {
-          setError(`Seleccione ambos talleres para el niño #${i + 1}.`);
-          return;
-        }
       }
     }
 
@@ -271,12 +255,6 @@ export default function InscripcionPublica() {
             condicionesMedicas: n.condicionesMedicas
               ? n.condicionesMedicas.toUpperCase()
               : null,
-            ctaller: n.ctaller
-              ? Number(n.ctaller)
-              : null,
-            ctaller2: n.ctaller2
-              ? Number(n.ctaller2)
-              : null,
             bautizado: n.bautizado === "true",
             bautizadoFecha: n.bautizadoFecha || null,
             bautizadoParroquia: n.bautizadoParroquia ? n.bautizadoParroquia.toUpperCase() : null,
@@ -305,10 +283,6 @@ export default function InscripcionPublica() {
             ? f.institucionEducativa.toUpperCase()
             : null,
           nivelEducativo: f.nivelEducativo || null,
-          comoConocio: f.comoConocio || null,
-          comoConocioOtro: f.comoConocio === "Otros" && f.comoConocioOtro
-            ? f.comoConocioOtro.toUpperCase()
-            : null,
         })),
         cusuario: 1,
         ...(eventoActual ? { cevento: eventoActual.id } : {}),
@@ -825,28 +799,6 @@ export default function InscripcionPublica() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                         </div>
                       </div>
-                      <div className="md:col-span-2 grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Taller deportivo *</label>
-                          <select name="ctaller" value={nino.ctaller} onChange={(e) => handleNinoChange(idx, e)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                            <option value="">Seleccione</option>
-                            {talleresDeportivos.filter((t) => t.activo).map((t) => (
-                              <option key={t.id} value={t.id}>{t.siglas} — {t.nombre}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Taller áulico *</label>
-                          <select name="ctaller2" value={nino.ctaller2} onChange={(e) => handleNinoChange(idx, e)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                            <option value="">Seleccione</option>
-                            {talleresAulicos.filter((t) => t.activo).map((t) => (
-                              <option key={t.id} value={t.id}>{t.siglas} — {t.nombre}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
                       <div className="md:col-span-2 border-t border-gray-200 pt-3 mt-2">
                         <h5 className="text-xs font-semibold text-gray-600 mb-2">Sacramentos</h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -982,26 +934,6 @@ export default function InscripcionPublica() {
                               <option value="3° Bachillerato">3° Bachillerato</option>
                               <option value="No estudia">No estudia</option>
                             </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">¿Cómo conoció el Oratorio?</label>
-                            <select value={fichas[idx]?.comoConocio || ''} onChange={(e) => {
-                              handleFichaChange(idx, 'comoConocio', e.target.value);
-                              if (e.target.value !== "Otros") handleFichaChange(idx, 'comoConocioOtro', '');
-                            }}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                              <option value="">Seleccione</option>
-                              <option value="Redes sociales">Redes sociales</option>
-                              <option value="Contacto">Contacto</option>
-                              <option value="Publicidad">Publicidad</option>
-                              <option value="Parroquia">Parroquia</option>
-                              <option value="Otros">Otros</option>
-                            </select>
-                            {(fichas[idx]?.comoConocio || '') === "Otros" && (
-                              <input type="text" value={fichas[idx]?.comoConocioOtro || ''}
-                                onChange={(e) => handleFichaChange(idx, 'comoConocioOtro', e.target.value)}
-                                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                            )}
                           </div>
                         </div>
                       </div>

@@ -67,6 +67,7 @@ export default function NuevaInscripcion() {
     const [error, setError] = useState(null);
 
     const [rep, setRep] = useState({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
+    const [observaciones, setObservaciones] = useState('');
     const [ninos, setNinos] = useState([{ ...emptyNino }]);
     const [nivelesCatequesis, setNivelesCatequesis] = useState([]);
     const [turnos, setTurnos] = useState([]);
@@ -326,6 +327,7 @@ export default function NuevaInscripcion() {
                 })),
                 cusuario: 1,
                 cevento: eventoActual.id,
+                notas: observaciones.trim() ? observaciones.trim().toUpperCase() : null,
             });
 
             setSuccess({
@@ -335,6 +337,7 @@ export default function NuevaInscripcion() {
             });
             setStep(0);
             setRep({ cedula: '', nombres: '', apellidos: '', direccion: '', email: '', celular: '', estadoCivil: '', ocupacion: '', lugarTrabajo: '' });
+            setObservaciones('');
             setNinos([{ ...emptyNino }]);
             setFichas([{ ...emptyFicha }]);
             setPadres([{ ...emptyPadre }, { ...emptyPadre }]);
@@ -492,6 +495,20 @@ export default function NuevaInscripcion() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* --- OBSERVACIONES --- */}
+                                <div className="border-t border-gray-200 pt-4">
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Observaciones</h3>
+                                    <label className="block text-sm font-medium text-gray-600 mb-1">Observaciones de la inscripción</label>
+                                    <textarea
+                                        name="observaciones"
+                                        rows={3}
+                                        maxLength={1000}
+                                        value={observaciones}
+                                        onChange={(e) => setObservaciones(e.target.value)}
+                                        placeholder="Indicaciones adicionales (opcional)"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y" />
+                                </div>
                             </div>
                         )}
 

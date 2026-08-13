@@ -92,6 +92,7 @@ public class InscripcionCompletaFacade {
         cabecera.setCusuario(cusuario);
         cabecera.setCrepresentante(representante.getId());
         cabecera.setCevento(cevento);
+        cabecera.setNotas(getString(json, "notas"));
         cabecera.setActivo(true);
         em.persist(cabecera);
 
@@ -190,12 +191,9 @@ public class InscripcionCompletaFacade {
 
             Ninio ninio = new Ninio();
             ninio.setCpersona(personaNin.getId());
-            ninio.setCgrupo(hasValue(ninJson, "cgrupo") ? getInt(ninJson, "cgrupo") : null);
             ninio.setSexo(getString(ninJson, "sexo"));
             ninio.setAlergias(getString(ninJson, "alergias"));
             ninio.setCondicionesMedicas(getString(ninJson, "condicionesMedicas"));
-            ninio.setCtallerDeportivo(hasValue(ninJson, "ctaller") ? getInt(ninJson, "ctaller") : null);
-            ninio.setCtallerAulico(hasValue(ninJson, "ctaller2") ? getInt(ninJson, "ctaller2") : null);
             ninio.setCpadre(idPadre);
             ninio.setCmadre(idMadre);
             ninio.setCrepresentante(representante.getId());
@@ -241,8 +239,6 @@ public class InscripcionCompletaFacade {
                 ficha.setTipoInstitucion(getString(fichaJson, "tipoInstitucion"));
                 ficha.setInstitucionEducativa(getString(fichaJson, "institucionEducativa"));
                 ficha.setNivelEducativo(getString(fichaJson, "nivelEducativo"));
-                ficha.setComoConocio(getString(fichaJson, "comoConocio"));
-                ficha.setComoConocioOtro(getString(fichaJson, "comoConocioOtro"));
                 ficha.setActivo(true);
                 em.persist(ficha);
             }

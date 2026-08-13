@@ -22,6 +22,11 @@ export const pagoService = {
     eliminar: (id) => post('/pagos/eliminar', { id }),
 };
 
+export const inscripcionEdicionService = {
+    obtenerCompleta: (idCabecera) => post('/inscripciones/obtener-completa', { idCabecera }),
+    actualizarCompleta: (data) => post('/inscripciones/actualizar-completa', data),
+};
+
 export const costoInscripcionService = {
     listar: () => post('/costos-inscripcion/listar', { page: 0, size: 100 }),
 };
