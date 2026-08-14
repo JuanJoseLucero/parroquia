@@ -576,6 +576,46 @@ public class InscripcionEdicionFacade {
          .getResultStream().findFirst().orElse(null);
     }
 
+    public Map<String, Object> darDeBaja(JsonObject json) {
+        Integer idDetalle = json.getInt("idDetalle");
+        InscripcionDetalle detalle = em.find(InscripcionDetalle.class, idDetalle);
+        if (detalle == null || !Boolean.TRUE.equals(detalle.getActivo())) {
+            throw new IllegalArgumentException("El detalle de inscripción no existe o ya está dado de baja.");
+        }
+
+        detalle.setActivo(false);
+
+        Integer idNinio = detalle.getTninio();
+        if (idNinio != null) {
+            Ninio ninio = em.find(Ninio.class, idNinio);
+            if (ninio != null) ninio.setActivo(false);
+        }
+
+        boolean cabeceraDesactivada = false;
+        Integer idCabecera = detalle.getCinscripcionCabecera();
+        if (idCabecera != null) {
+            Long activos = em.createQuery(
+                "SELECT COUNT(d) FROM InscripcionDetalle d WHERE d.cinscripcionCabecera = :cab AND d.activo = true",
+                Long.class
+            ).setParameter("cab", idCabecera).getSingleResult();
+            if (activos == 0L) {
+                InscripcionCabecera cabecera = em.find(InscripcionCabecera.class, idCabecera);
+                if (cabecera != null) {
+                    cabecera.setActivo(false);
+                    cabeceraDesactivada = true;
+                }
+            }
+        }
+
+        em.flush();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("idDetalle", detalle.getId());
+        result.put("ninioId", idNinio);
+        result.put("cabeceraDesactivada", cabeceraDesactivada);
+        return result;
+    }
+
     private Map<String, Object> personaToMap(Persona p) {
         Map<String, Object> m = new HashMap<>();
         if (p == null) return m;

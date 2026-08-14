@@ -43,4 +43,17 @@ public class InscripcionEdicionResource {
                     .build();
         }
     }
+
+    @POST
+    @Path("/dar-de-baja")
+    public Response darDeBaja(JsonObject json) {
+        try {
+            Map<String, Object> result = facade.darDeBaja(json);
+            return Response.ok(result).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", e.getMessage()))
+                    .build();
+        }
+    }
 }

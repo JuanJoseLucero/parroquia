@@ -320,7 +320,8 @@ export default function NuevaInscripcion() {
                 padres: padres.filter(p => p.nombres.trim() !== '').map((p, i) => ({
                     tipoPadre: i === 0 ? 'padre' : 'madre',
                     cedula: p.cedula || null,
-                    nombre: `${p.nombres} ${p.apellidos}`.trim().toUpperCase(),
+                    nombres: upper(p.nombres),
+                    apellidos: upper(p.apellidos),
                     ocupacion: p.ocupacion ? p.ocupacion.toUpperCase() : null,
                     lugarTrabajo: p.lugarTrabajo ? p.lugarTrabajo.toUpperCase() : null,
                     telefono: p.telefono || null,

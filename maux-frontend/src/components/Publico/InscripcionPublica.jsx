@@ -56,7 +56,7 @@ const emptyNino = {
 
 const emptyFicha = { sectorResidencia: "", tipoInstitucion: "", institucionEducativa: "", nivelEducativo: "" };
 
-const emptyPadre = { nombre: "", ocupacion: "", lugarTrabajo: "", telefono: "" };
+const emptyPadre = { nombres: "", apellidos: "", ocupacion: "", lugarTrabajo: "", telefono: "" };
 
 export default function InscripcionPublica() {
   const navigate = useNavigate();
@@ -267,9 +267,10 @@ export default function InscripcionPublica() {
             parroquiaAnterior: n.parroquiaAnterior ? n.parroquiaAnterior.toUpperCase() : null,
           }))
           .filter((_, i) => !ninosDuplicados[i]),
-        padres: padres.filter(p => p.nombre.trim() !== '').map((p, i) => ({
+        padres: padres.filter(p => p.nombres.trim() !== '').map((p, i) => ({
           tipoPadre: i === 0 ? "padre" : "madre",
-          nombre: p.nombre.toUpperCase(),
+          nombres: p.nombres.toUpperCase(),
+          apellidos: p.apellidos ? p.apellidos.toUpperCase() : null,
           ocupacion: p.ocupacion ? p.ocupacion.toUpperCase() : null,
           lugarTrabajo: p.lugarTrabajo ? p.lugarTrabajo.toUpperCase() : null,
           telefono: p.telefono || null,
@@ -681,8 +682,13 @@ export default function InscripcionPublica() {
                       <span className="text-xs font-semibold text-gray-600 mb-3 block">{label}</span>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
-                          <input type="text" value={padres[i]?.nombre || ''} onChange={(e) => handlePadreChange(i, 'nombre', e.target.value)}
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Nombres</label>
+                          <input type="text" value={padres[i]?.nombres || ''} onChange={(e) => handlePadreChange(i, 'nombres', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Apellidos</label>
+                          <input type="text" value={padres[i]?.apellidos || ''} onChange={(e) => handlePadreChange(i, 'apellidos', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                         </div>
                         <div>

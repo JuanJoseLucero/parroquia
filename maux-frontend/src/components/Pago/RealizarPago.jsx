@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { pagoService } from '../../api/services/inscripcionService';
 import { metodoPagoService } from '../../api/services/inscripcionService';
 import { formatMoney, ESTADOS_INSCRIPCION } from '../../utils/formatters';
@@ -32,6 +32,17 @@ export default function RealizarPago() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+    const [busqueda, setBusqueda] = useState('');
+
+    const participantesFiltrados = useMemo(() => {
+        const s = busqueda.trim().toLowerCase();
+        if (!s) return participantes;
+        return participantes.filter(p =>
+            (p.apellidos || '').toLowerCase().includes(s) ||
+            (p.nombres || '').toLowerCase().includes(s) ||
+            String(p.cedula || '').includes(s)
+        );
+    }, [participantes, busqueda]);
 
     const buscarParticipantes = async () => {
         setLoading(true);
@@ -123,10 +134,18 @@ export default function RealizarPago() {
 
             {step === 0 && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <button onClick={buscarParticipantes} disabled={loading}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors mb-4">
-                        {loading ? 'Cargando...' : 'Buscar Participantes'}
-                    </button>
+                    <div className="flex flex-wrap gap-4 items-end mb-4">
+                        <div className="flex-1 min-w-[200px]">
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Buscar</label>
+                            <input type="text" placeholder="Nombre o cédula" value={busqueda}
+                                onChange={e => setBusqueda(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <button onClick={buscarParticipantes} disabled={loading}
+                            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                            {loading ? 'Cargando...' : 'Buscar Participantes'}
+                        </button>
+                    </div>
 
                     {participantes.length > 0 && (
                         <div className="overflow-x-auto">
@@ -134,6 +153,7 @@ export default function RealizarPago() {
                                 <thead>
                                     <tr className="border-b text-gray-500">
                                         <th className="text-left py-2">Niño</th>
+                                        <th className="text-left py-2">Cédula</th>
                                         <th className="text-left py-2">Estado</th>
                                         <th className="text-right py-2">Pagado</th>
                                         <th className="text-right py-2">Pendiente</th>
@@ -141,9 +161,10 @@ export default function RealizarPago() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {participantes.map(p => (
+                                    {participantesFiltrados.map(p => (
                                         <tr key={p.idDetalle} className="border-b hover:bg-gray-50">
-                                            <td className="py-2">{p.nombreCompleto}</td>
+                                            <td className="py-2">{p.apellidos}, {p.nombres}</td>
+                                            <td className="py-2">{p.cedula}</td>
                                             <td className="py-2">
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                                     p.cestadoinscripcion === 2 ? 'bg-green-100 text-green-700' :
@@ -165,6 +186,9 @@ export default function RealizarPago() {
                             </table>
                         </div>
                     )}
+                    {participantes.length > 0 && participantesFiltrados.length === 0 && (
+                        <p className="text-gray-400 text-sm text-center py-8">Sin resultados para la búsqueda.</p>
+                    )}
                     {participantes.length === 0 && !loading && (
                         <p className="text-gray-400 text-sm text-center py-8">Presione "Buscar Participantes" para cargar la lista.</p>
                     )}
@@ -178,7 +202,7 @@ export default function RealizarPago() {
                     </button>
 
                     <div className="p-4 bg-gray-50 rounded-lg mb-6">
-                        <h3 className="font-semibold text-gray-700">{detalle.nombreCompleto}</h3>
+                        <h3 className="font-semibold text-gray-700">{detalle.apellidos}, {detalle.nombres}</h3>
                         <p className="text-sm text-gray-500">Cédula: {detalle.cedula}</p>
                         <p className="text-sm text-gray-500">Costo total: {formatMoney(detalle.costo || costoTotal)}</p>
                         <p className="text-sm text-gray-500">Pagado: {formatMoney(detalle.totalPagado)}</p>

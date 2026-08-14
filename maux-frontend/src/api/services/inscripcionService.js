@@ -25,6 +25,7 @@ export const pagoService = {
 export const inscripcionEdicionService = {
     obtenerCompleta: (idCabecera) => post('/inscripciones/obtener-completa', { idCabecera }),
     actualizarCompleta: (data) => post('/inscripciones/actualizar-completa', data),
+    darDeBaja: (idDetalle) => post('/inscripciones/dar-de-baja', { idDetalle }),
 };
 
 export const costoInscripcionService = {

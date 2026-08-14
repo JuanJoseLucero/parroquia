@@ -119,7 +119,8 @@ public class InscripcionCompletaFacade {
                 if (personaPadre == null) {
                     personaPadre = new Persona();
                     personaPadre.setCedula(padreCedula);
-                    personaPadre.setNombres(getString(padreJson, "nombre"));
+                    personaPadre.setNombres(getString(padreJson, "nombres"));
+                    personaPadre.setApellidos(getString(padreJson, "apellidos"));
                     personaPadre.setCelular(getString(padreJson, "telefono"));
                     personaPadre.setActivo(true);
                     em.persist(personaPadre);

@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { personaService, ninioService } from '../../api/services/personaService';
-import { inscripcionCabeceraService, inscripcionDetalleService, pagoService, costoInscripcionService } from '../../api/services/inscripcionService';
+import { inscripcionCabeceraService, inscripcionDetalleService, pagoService, costoInscripcionService, inscripcionEdicionService } from '../../api/services/inscripcionService';
+import { nivelCatequesisService } from '../../api/services/catequesisService';
 import { formatMoney, formatDate, ESTADOS_INSCRIPCION } from '../../utils/formatters';
 
 function calcularEdad(fechaNacimiento) {
@@ -21,6 +22,8 @@ export default function ListarParticipantes() {
     const [filteredRows, setFilteredRows] = useState([]);
     const [filterEstado, setFilterEstado] = useState('');
     const [filterEdad, setFilterEdad] = useState('');
+    const [filterNivel, setFilterNivel] = useState('');
+    const [niveles, setNiveles] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
@@ -41,13 +44,14 @@ export default function ListarParticipantes() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const [detallesRes, cabecerasRes, niniosRes, personasRes, pagosRes, costosRes] = await Promise.all([
+            const [detallesRes, cabecerasRes, niniosRes, personasRes, pagosRes, costosRes, nivelesRes] = await Promise.all([
                 inscripcionDetalleService.listarAdmin(0, 5000),
                 inscripcionCabeceraService.listarAdmin(0, 5000),
                 ninioService.listarAdmin(0, 5000),
                 personaService.listarAdmin(0, 5000),
                 pagoService.listarAdmin(0, 5000),
                 costoInscripcionService.listar(),
+                nivelCatequesisService.listar(),
             ]);
 
             setCosto((costosRes?.data?.[0]?.monto) || 15);
@@ -57,8 +61,11 @@ export default function ListarParticipantes() {
             const detalles = detallesRes?.data || [];
             const cabeceras = cabecerasRes?.data || [];
             const pagos = pagosRes?.data || [];
+            const niveles = nivelesRes?.data || [];
+            setNiveles(niveles);
 
             const buildRow = (d) => {
+                if (d.activo === false) return null;
                 const ninio = ninios.find(n => n.id === d.tninio);
                 if (!ninio) return null;
                 const persona = personList.find(p => p.id === ninio.cpersona);
@@ -72,7 +79,9 @@ export default function ListarParticipantes() {
                 return {
                     id: d.id,
                     cedula: persona.cedula,
-                    nombre: `${persona.nombres} ${persona.apellidos}`,
+                    nombre: `${persona.apellidos}, ${persona.nombres}`,
+                    nivelId: d.cnivelcatequesis ?? null,
+                    nivel: niveles.find(n => n.id === d.cnivelcatequesis)?.nombre || '',
                     fechaNacimiento: persona.fechaNacimiento || null,
                     edad,
                     estadoId: d.cestadoinscripcion,
@@ -85,11 +94,19 @@ export default function ListarParticipantes() {
             };
 
             let rows = detalles.map(buildRow).filter(Boolean);
+            rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
             if (filterEstado) rows = rows.filter(r => r.estadoId === parseInt(filterEstado));
             if (filterEdad) {
                 const selectedGroup = AGE_GROUPS.find(group => group.value === filterEdad);
                 if (selectedGroup) rows = rows.filter(r => selectedGroup.matches(r.edad));
+            }
+            if (filterNivel) {
+                if (filterNivel === 'sin-nivel') {
+                    rows = rows.filter(r => r.nivelId == null);
+                } else {
+                    rows = rows.filter(r => r.nivelId === parseInt(filterNivel));
+                }
             }
             if (search) {
                 const s = search.toLowerCase();
@@ -104,17 +121,18 @@ export default function ListarParticipantes() {
         } finally {
             setLoading(false);
         }
-    }, [page, filterEstado, filterEdad, search]);
+    }, [page, filterEstado, filterEdad, filterNivel, search]);
 
     useEffect(() => { load(); }, [load]);
 
     const totalPages = Math.ceil(total / PAGE_SIZE);
 
     const exportExcel = () => {
-        const headers = ['Cédula', 'Nombre', 'Fecha Nacimiento', 'Edad', 'Observaciones'];
+        const headers = ['Cédula', 'Nombre', 'Nivel', 'Fecha Nacimiento', 'Edad', 'Observaciones'];
         const mapRows = (rows) => rows.map(r => [
             r.cedula,
             r.nombre,
+            r.nivel,
             formatDate(r.fechaNacimiento),
             r.edad ?? '',
             r.notas || '',
@@ -132,6 +150,24 @@ export default function ListarParticipantes() {
         });
 
         XLSX.writeFile(wb, 'participantes-por-edad.xlsx');
+    };
+
+    const [deletingId, setDeletingId] = useState(null);
+
+    const handleEliminar = async (r) => {
+        const deuda = r.pendiente > 0 ? ` Quitará su deuda pendiente de ${formatMoney(r.pendiente)}.` : '';
+        if (!window.confirm(`¿Dar de baja a ${r.nombre}?${deuda}`)) return;
+        setDeletingId(r.id);
+        try {
+            await inscripcionEdicionService.darDeBaja(r.id);
+            await load();
+        } catch (e) {
+            console.error(e);
+            const mensaje = e?.response?.data?.error || 'No se pudo dar de baja. Intente nuevamente.';
+            alert(mensaje);
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     return (
@@ -166,6 +202,15 @@ export default function ListarParticipantes() {
                             ))}
                         </select>
                     </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Nivel</label>
+                        <select value={filterNivel} onChange={e => { setFilterNivel(e.target.value); setPage(0); }}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Todos</option>
+                            <option value="sin-nivel">Sin nivel</option>
+                            {niveles.map(n => <option key={n.id} value={n.id}>{n.nombre}</option>)}
+                        </select>
+                    </div>
                     <div className="ml-auto">
                         <button
                             onClick={exportExcel}
@@ -184,6 +229,7 @@ export default function ListarParticipantes() {
                             <tr>
                                 <th className="text-left py-3 px-4">Cédula</th>
                                 <th className="text-left py-3 px-4">Nombres</th>
+                                <th className="text-left py-3 px-4">Nivel</th>
                                 <th className="text-left py-3 px-4">Edad</th>
                                 <th className="text-left py-3 px-4">Estado</th>
                                 <th className="text-right py-3 px-4">Pagado</th>
@@ -194,13 +240,14 @@ export default function ListarParticipantes() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={8} className="text-center py-8 text-gray-400">Cargando...</td></tr>
+                                <tr><td colSpan={9} className="text-center py-8 text-gray-400">Cargando...</td></tr>
                             ) : data.length === 0 ? (
-                                <tr><td colSpan={8} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
+                                <tr><td colSpan={9} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
                             ) : data.map(r => (
                                 <tr key={r.id} className="border-b hover:bg-gray-50 transition-colors">
                                     <td className="py-3 px-4 font-mono">{r.cedula}</td>
                                     <td className="py-3 px-4 font-medium">{r.nombre}</td>
+                                    <td className="py-3 px-4">{r.nivel || '-'}</td>
                                     <td className="py-3 px-4">{r.edad ?? '-'}</td>
                                     <td className="py-3 px-4">
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -220,12 +267,24 @@ export default function ListarParticipantes() {
                                         )}
                                     </td>
                                     <td className="py-3 px-4">
-                                        {r.cabeceraId && (
-                                            <button onClick={() => navigate(`/inscripciones/editar/${r.cabeceraId}`)}
-                                                className="px-3 py-1 text-xs text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors">
-                                                Editar
+                                        <div className="flex items-center gap-1">
+                                            {r.cabeceraId && (
+                                                <button onClick={() => navigate(`/inscripciones/editar/${r.cabeceraId}`)}
+                                                    className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg p-1.5 transition-colors" title="Editar">
+                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleEliminar(r)}
+                                                disabled={deletingId === r.id}
+                                                className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg p-1.5 transition-colors disabled:opacity-50" title="Eliminar">
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
                                             </button>
-                                        )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
