@@ -41,7 +41,12 @@ export const guiaService = {
     listarAdmin: (page = 0, size = 20) => post('/guias/listar-admin', { page, size }),
     obtener: (id) => post('/guias/obtener', { id }),
     crear: (data) => post('/guias/crear', data),
+    actualizar: (data) => post('/guias/actualizar', data),
     eliminar: (id) => post('/guias/eliminar', { id }),
+};
+
+export const nivelCatequesisService = {
+    listar: () => post('/niveles-catequesis/listar', { page: 0, size: 100 }),
 };
 
 export const eventoService = {

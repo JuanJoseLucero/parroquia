@@ -56,10 +56,12 @@ public class PersonaResource {
         entity.setNombres(json.getString("nombres", null));
         entity.setApellidos(json.getString("apellidos", null));
         entity.setDireccion(json.getString("direccion", null));
+        entity.setBarrio(json.getString("barrio", null));
         entity.setEmail(json.getString("email", null));
         entity.setCelular(json.getString("celular", null));
         if (json.containsKey("fechaNacimiento") && !json.isNull("fechaNacimiento")) entity.setFechaNacimiento(java.time.LocalDate.parse(json.getString("fechaNacimiento")));
         entity.setAniosCumplidos(json.getInt("aniosCumplidos", 0));
+        entity.setEstadoCivil(json.getString("estadoCivil", null));
         var created = facade.create(entity);
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
@@ -74,10 +76,12 @@ public class PersonaResource {
         if (json.containsKey("nombres")) entity.setNombres(json.getString("nombres", null));
         if (json.containsKey("apellidos")) entity.setApellidos(json.getString("apellidos", null));
         if (json.containsKey("direccion")) entity.setDireccion(json.getString("direccion", null));
+        if (json.containsKey("barrio")) entity.setBarrio(json.getString("barrio", null));
         if (json.containsKey("email")) entity.setEmail(json.getString("email", null));
         if (json.containsKey("celular")) entity.setCelular(json.getString("celular", null));
         if (json.containsKey("fechaNacimiento")) { if (json.isNull("fechaNacimiento")) entity.setFechaNacimiento(null); else entity.setFechaNacimiento(java.time.LocalDate.parse(json.getString("fechaNacimiento"))); }
         if (json.containsKey("aniosCumplidos")) entity.setAniosCumplidos(json.getInt("aniosCumplidos"));
+        if (json.containsKey("estadoCivil")) entity.setEstadoCivil(json.getString("estadoCivil", null));
         var updated = facade.update(entity);
         return Response.ok(updated).build();
     }

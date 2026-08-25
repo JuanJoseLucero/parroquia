@@ -6,6 +6,7 @@ import EditarInscripcion from './components/Inscripcion/EditarInscripcion';
 import RealizarPago from './components/Pago/RealizarPago';
 import ListarParticipantes from './components/Listados/ListarParticipantes';
 import ListarGuias from './components/Listados/ListarGuias';
+import RegistroGuia from './components/Listados/RegistroGuia';
 import GenerarReportes from './components/Reportes/GenerarReportes';
 import InscripcionPublica from './components/Publico/InscripcionPublica';
 import ProtectedRoute from './ProtectedRoute';
@@ -23,6 +24,8 @@ export default function App() {
                         <Route path="/inscripciones/pago" element={<RealizarPago />} />
                         <Route path="/participantes" element={<ListarParticipantes />} />
                         <Route path="/guias" element={<ListarGuias />} />
+                        <Route path="/guias/registrar" element={<RegistroGuia />} />
+                        <Route path="/guias/editar/:id" element={<RegistroGuia />} />
                         <Route path="/reportes" element={<GenerarReportes />} />
                     </Route>
                 </Route>

@@ -24,6 +24,9 @@ public class Persona implements Serializable {
     @Column(name = "direccion")
     private String direccion;
 
+    @Column(name = "barrio", length = 100)
+    private String barrio;
+
     @Column(name = "email")
     private String email;
 
@@ -57,6 +60,9 @@ public class Persona implements Serializable {
 
     public String getDireccion() { return direccion; }
     public void setDireccion(String direccion) { this.direccion = direccion; }
+
+    public String getBarrio() { return barrio; }
+    public void setBarrio(String barrio) { this.barrio = barrio; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

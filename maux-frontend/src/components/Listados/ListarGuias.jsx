@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { personaService, guiaService, grupoService, grupoGuiaService } from '../../api/services/personaService';
 
 export default function ListarGuias() {
+    const navigate = useNavigate();
     const [data, setData] = useState([]);
     const [grupos, setGrupos] = useState([]);
     const [asignaciones, setAsignaciones] = useState([]);
@@ -73,7 +75,13 @@ export default function ListarGuias() {
 
     return (
         <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Listar Guías</h2>
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Listar Catequistas</h2>
+                <button onClick={() => navigate('/guias/registrar')}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                    + Nuevo Catequista
+                </button>
+            </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -91,7 +99,7 @@ export default function ListarGuias() {
                             {loading ? (
                                 <tr><td colSpan={5} className="text-center py-8 text-gray-400">Cargando...</td></tr>
                             ) : data.length === 0 ? (
-                                <tr><td colSpan={5} className="text-center py-8 text-gray-400">Sin guías registrados</td></tr>
+                                <tr><td colSpan={5} className="text-center py-8 text-gray-400">Sin catequistas registrados</td></tr>
                             ) : data.map(g => (
                                 <tr key={g.id} className="border-b hover:bg-gray-50">
                                     <td className="py-3 px-4 font-medium">{g.persona?.nombres || '—'}</td>
@@ -112,7 +120,11 @@ export default function ListarGuias() {
                                             </div>
                                         )}
                                     </td>
-                                    <td className="py-3 px-4 text-right">
+                                    <td className="py-3 px-4 text-right space-x-3 whitespace-nowrap">
+                                        <button onClick={() => navigate(`/guias/editar/${g.id}`)}
+                                            className="text-xs text-gray-600 hover:text-gray-800 font-medium">
+                                            Editar
+                                        </button>
                                         <button onClick={() => openAsignar(g)}
                                             className="text-xs text-blue-600 hover:text-blue-800 font-medium">
                                             + Asignar
@@ -130,7 +142,7 @@ export default function ListarGuias() {
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
                     <div className="bg-white rounded-xl p-6 w-96 shadow-xl" onClick={e => e.stopPropagation()}>
                         <h3 className="font-semibold text-gray-700 mb-4">
-                            Asignar grupo a {modalGuia.persona?.nombres || 'Guía'}
+                            Asignar grupo a {modalGuia.persona?.nombres || 'Catequista'}
                         </h3>
                         {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
                         <div className="space-y-3">
