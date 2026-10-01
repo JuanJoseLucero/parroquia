@@ -55,6 +55,7 @@ public class InscripcionDetalleResource {
         entity.setCinscripcionCabecera(json.getInt("cinscripcionCabecera", 0));
         entity.setTninio(json.getInt("tninio", 0));
         entity.setCestadoinscripcion(json.getInt("cestadoinscripcion", 1));
+        if (json.containsKey("cturno") && !json.isNull("cturno")) entity.setCturno(json.getInt("cturno"));
         var created = facade.create(entity);
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
@@ -68,6 +69,7 @@ public class InscripcionDetalleResource {
         if (json.containsKey("cinscripcionCabecera")) entity.setCinscripcionCabecera(json.getInt("cinscripcionCabecera"));
         if (json.containsKey("tninio")) entity.setTninio(json.getInt("tninio"));
         if (json.containsKey("cestadoinscripcion")) entity.setCestadoinscripcion(json.getInt("cestadoinscripcion"));
+        if (json.containsKey("cturno")) entity.setCturno(json.isNull("cturno") ? null : json.getInt("cturno"));
         var updated = facade.update(entity);
         return Response.ok(updated).build();
     }

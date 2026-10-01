@@ -81,6 +81,7 @@ public class InscripcionEdicionFacade {
             Map<String, Object> detData = new HashMap<>();
             detData.put("cestadoinscripcion", det.getCestadoinscripcion());
             detData.put("cnivelcatequesis", det.getCnivelcatequesis());
+            detData.put("cturno", det.getCturno());
             detData.put("catequistaAnterior", det.getCatequistaAnterior());
             detData.put("parroquiaAnterior", det.getParroquiaAnterior());
             n.put("detalle", detData);
@@ -364,6 +365,7 @@ public class InscripcionEdicionFacade {
         detalle.setTninio(ninio.getId());
         detalle.setCestadoinscripcion(1);
         if (hasValue(ninJson, "nivelCatequesis")) detalle.setCnivelcatequesis(getInt(ninJson, "nivelCatequesis"));
+        if (hasValue(ninJson, "turno")) detalle.setCturno(getInt(ninJson, "turno"));
         detalle.setCatequistaAnterior(getString(ninJson, "catequistaAnterior"));
         detalle.setParroquiaAnterior(getString(ninJson, "parroquiaAnterior"));
         detalle.setActivo(true);
@@ -414,6 +416,7 @@ public class InscripcionEdicionFacade {
 
         // El estado de pago NO se edita (queda derivado de los pagos)
         detalle.setCnivelcatequesis(getNullableInt(ninJson, "nivelCatequesis", detalle.getCnivelcatequesis()));
+        detalle.setCturno(getNullableInt(ninJson, "turno", detalle.getCturno()));
         detalle.setCatequistaAnterior(getString(ninJson, "catequistaAnterior"));
         detalle.setParroquiaAnterior(getString(ninJson, "parroquiaAnterior"));
         em.merge(detalle);

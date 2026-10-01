@@ -11,6 +11,7 @@ export const personaService = {
 
 export const representanteService = {
     listar: (page = 0, size = 20) => post('/representantes/listar', { page, size }),
+    listarAdmin: (page = 0, size = 20) => post('/representantes/listar-admin', { page, size }),
     crear: (data) => post('/representantes/crear', data),
     obtener: (id) => post('/representantes/obtener', { id }),
 };

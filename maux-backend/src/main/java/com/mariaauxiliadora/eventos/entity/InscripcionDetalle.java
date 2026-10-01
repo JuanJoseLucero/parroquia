@@ -23,6 +23,9 @@ public class InscripcionDetalle implements Serializable {
     @Column(name = "cnivelcatequesis")
     private Integer cnivelcatequesis;
 
+    @Column(name = "cturno")
+    private Integer cturno;
+
     @Column(name = "catequista_anterior")
     private String catequistaAnterior;
 
@@ -50,6 +53,9 @@ public class InscripcionDetalle implements Serializable {
 
     public Integer getCnivelcatequesis() { return cnivelcatequesis; }
     public void setCnivelcatequesis(Integer cnivelcatequesis) { this.cnivelcatequesis = cnivelcatequesis; }
+
+    public Integer getCturno() { return cturno; }
+    public void setCturno(Integer cturno) { this.cturno = cturno; }
 
     public String getCatequistaAnterior() { return catequistaAnterior; }
     public void setCatequistaAnterior(String catequistaAnterior) { this.catequistaAnterior = catequistaAnterior; }

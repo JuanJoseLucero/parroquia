@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { inscripcionEdicionService } from '../../api/services/inscripcionService';
-import { nivelCatequesisService } from '../../api/services/catequesisService';
+import { nivelCatequesisService, turnoService } from '../../api/services/catequesisService';
 
 const onlyAlpha = (v) => v.replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/g, '');
 const onlyDigits = (v) => v.replace(/\D/g, '');
@@ -37,7 +37,7 @@ function nuevoNino() {
         cpadre: null, cmadre: null,
         bautizado: '', bautizadoFecha: '', bautizadoParroquia: '',
         eucaristia: '', eucaristiaFecha: '', eucaristiaParroquia: '',
-        nivelCatequesis: '', catequistaAnterior: '', parroquiaAnterior: '',
+        nivelCatequesis: '', turno: '', catequistaAnterior: '', parroquiaAnterior: '',
         ficha: { ...emptyFicha },
         eliminar: false,
     };
@@ -68,6 +68,7 @@ function ninoDesdeBackend(d) {
         eucaristiaFecha: sac.eucaristiaFecha || '',
         eucaristiaParroquia: sac.eucaristiaParroquia || '',
         nivelCatequesis: detalle.cnivelcatequesis ?? '',
+        turno: detalle.cturno ?? '',
         catequistaAnterior: detalle.catequistaAnterior || '',
         parroquiaAnterior: detalle.parroquiaAnterior || '',
         ficha: {
@@ -156,9 +157,11 @@ export default function EditarInscripcion() {
     const [ninos, setNinos] = useState([]);
 
     const [niveles, setNiveles] = useState([]);
+    const [turnos, setTurnos] = useState([]);
 
     useEffect(() => {
         nivelCatequesisService.listar().then(res => setNiveles(res.data || [])).catch(() => {});
+        turnoService.listar().then(res => setTurnos(res.data || [])).catch(() => {});
     }, []);
 
     const load = useCallback(async () => {
@@ -383,6 +386,7 @@ export default function EditarInscripcion() {
                     cpadre: padreActual ? (padreActual.id || null) : null,
                     cmadre: madreActual ? (madreActual.id || null) : null,
                     nivelCatequesis: n.nivelCatequesis !== '' && n.nivelCatequesis != null ? Number(n.nivelCatequesis) : null,
+                    turno: n.turno !== '' && n.turno != null ? Number(n.turno) : null,
                     catequistaAnterior: n.catequistaAnterior ? upper(n.catequistaAnterior) : null,
                     parroquiaAnterior: n.parroquiaAnterior ? upper(n.parroquiaAnterior) : null,
                     bautizado: n.bautizado === 'true',
@@ -559,6 +563,7 @@ export default function EditarInscripcion() {
                                     idx={idx}
                                     data={nino}
                                     niveles={niveles}
+                                    turnos={turnos}
                                     onChange={(e) => handleNinoChange(idx, e)}
                                     onFichaChange={(field, value) => handleFichaChange(idx, field, value)}
                                     onRemove={() => marcarEliminarNino(idx)}
@@ -661,7 +666,7 @@ function PadreSection({ label, data, onChange, onRemove, onRestaurar, esRep, onS
     );
 }
 
-function NinoSection({ idx, data, niveles, onChange, onFichaChange, onRemove, onRestaurar, resumen }) {
+function NinoSection({ idx, data, niveles, turnos, onChange, onFichaChange, onRemove, onRestaurar, resumen }) {
     if (data.eliminar) {
         return (
             <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -726,6 +731,14 @@ function NinoSection({ idx, data, niveles, onChange, onFichaChange, onRemove, on
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
                             <option value="">Seleccione</option>
                             {niveles.map(nc => <option key={nc.id} value={nc.id}>{nc.nombre}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Turno</label>
+                        <select name="turno" value={data.turno} onChange={onChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                            <option value="">Seleccione</option>
+                            {turnos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
                         </select>
                     </div>
                     <Input label="Catequista anterior" name="catequistaAnterior" value={data.catequistaAnterior} onChange={onChange} />

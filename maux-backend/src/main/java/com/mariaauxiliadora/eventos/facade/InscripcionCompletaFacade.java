@@ -208,6 +208,9 @@ public class InscripcionCompletaFacade {
             if (hasValue(ninJson, "nivelCatequesis")) {
                 detalle.setCnivelcatequesis(getInt(ninJson, "nivelCatequesis"));
             }
+            if (hasValue(ninJson, "turno")) {
+                detalle.setCturno(getInt(ninJson, "turno"));
+            }
             detalle.setCatequistaAnterior(getString(ninJson, "catequistaAnterior"));
             detalle.setParroquiaAnterior(getString(ninJson, "parroquiaAnterior"));
             detalle.setActivo(true);

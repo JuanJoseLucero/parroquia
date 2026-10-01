@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { personaService, ninioService } from '../../api/services/personaService';
+import { personaService, ninioService, representanteService } from '../../api/services/personaService';
 import { inscripcionCabeceraService, inscripcionDetalleService, pagoService, costoInscripcionService, inscripcionEdicionService } from '../../api/services/inscripcionService';
-import { nivelCatequesisService } from '../../api/services/catequesisService';
+import { nivelCatequesisService, turnoService } from '../../api/services/catequesisService';
 import { formatMoney, formatDate, ESTADOS_INSCRIPCION } from '../../utils/formatters';
 
 function calcularEdad(fechaNacimiento) {
@@ -44,7 +44,7 @@ export default function ListarParticipantes() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const [detallesRes, cabecerasRes, niniosRes, personasRes, pagosRes, costosRes, nivelesRes] = await Promise.all([
+            const [detallesRes, cabecerasRes, niniosRes, personasRes, pagosRes, costosRes, nivelesRes, representantesRes, turnosRes] = await Promise.all([
                 inscripcionDetalleService.listarAdmin(0, 5000),
                 inscripcionCabeceraService.listarAdmin(0, 5000),
                 ninioService.listarAdmin(0, 5000),
@@ -52,6 +52,8 @@ export default function ListarParticipantes() {
                 pagoService.listarAdmin(0, 5000),
                 costoInscripcionService.listar(),
                 nivelCatequesisService.listar(),
+                representanteService.listarAdmin(0, 5000),
+                turnoService.listar(),
             ]);
 
             setCosto((costosRes?.data?.[0]?.monto) || 15);
@@ -62,6 +64,8 @@ export default function ListarParticipantes() {
             const cabeceras = cabecerasRes?.data || [];
             const pagos = pagosRes?.data || [];
             const niveles = nivelesRes?.data || [];
+            const representantes = representantesRes?.data || [];
+            const turnos = turnosRes?.data || [];
             setNiveles(niveles);
 
             const buildRow = (d) => {
@@ -76,14 +80,22 @@ export default function ListarParticipantes() {
                     ? calcularEdad(persona.fechaNacimiento)
                     : (persona.aniosCumplidos ?? null);
 
+                const rep = representantes.find(r => r.id === ninio.crepresentante);
+                const repPersona = rep ? personList.find(p => p.id === rep.cpersona) : null;
+
                 return {
                     id: d.id,
                     cedula: persona.cedula,
                     nombre: `${persona.apellidos}, ${persona.nombres}`,
                     nivelId: d.cnivelcatequesis ?? null,
                     nivel: niveles.find(n => n.id === d.cnivelcatequesis)?.nombre || '',
+                    turno: turnos.find(t => t.id === d.cturno)?.nombre || '',
+                    catequistaAnterior: d.catequistaAnterior || '',
                     fechaNacimiento: persona.fechaNacimiento || null,
                     edad,
+                    representanteNombre: repPersona ? `${repPersona.apellidos}, ${repPersona.nombres}` : '',
+                    representanteTelefono: repPersona?.celular || '',
+                    representanteDireccion: repPersona?.direccion || '',
                     estadoId: d.cestadoinscripcion,
                     estado: ESTADOS_INSCRIPCION[d.cestadoinscripcion] || 'Desconocido',
                     totalPagado,
@@ -128,13 +140,18 @@ export default function ListarParticipantes() {
     const totalPages = Math.ceil(total / PAGE_SIZE);
 
     const exportExcel = () => {
-        const headers = ['Cédula', 'Nombre', 'Nivel', 'Fecha Nacimiento', 'Edad', 'Observaciones'];
+        const headers = ['Cédula', 'Nombre', 'Nivel', 'Turno', 'Catequista Anterior', 'Fecha Nacimiento', 'Edad', 'Representante', 'Teléfono Rep.', 'Dirección Rep.', 'Observaciones'];
         const mapRows = (rows) => rows.map(r => [
             r.cedula,
             r.nombre,
             r.nivel,
+            r.turno,
+            r.catequistaAnterior,
             formatDate(r.fechaNacimiento),
             r.edad ?? '',
+            r.representanteNombre,
+            r.representanteTelefono,
+            r.representanteDireccion,
             r.notas || '',
         ]);
 
@@ -230,7 +247,12 @@ export default function ListarParticipantes() {
                                 <th className="text-left py-3 px-4">Cédula</th>
                                 <th className="text-left py-3 px-4">Nombres</th>
                                 <th className="text-left py-3 px-4">Nivel</th>
+                                <th className="text-left py-3 px-4">Turno</th>
+                                <th className="text-left py-3 px-4">Catequista Anterior</th>
                                 <th className="text-left py-3 px-4">Edad</th>
+                                <th className="text-left py-3 px-4">Representante</th>
+                                <th className="text-left py-3 px-4">Tel. Representante</th>
+                                <th className="text-left py-3 px-4">Dirección Representante</th>
                                 <th className="text-left py-3 px-4">Estado</th>
                                 <th className="text-right py-3 px-4">Pagado</th>
                                 <th className="text-right py-3 px-4">Pendiente</th>
@@ -240,15 +262,38 @@ export default function ListarParticipantes() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={9} className="text-center py-8 text-gray-400">Cargando...</td></tr>
+                                <tr><td colSpan={14} className="text-center py-8 text-gray-400">Cargando...</td></tr>
                             ) : data.length === 0 ? (
-                                <tr><td colSpan={9} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
+                                <tr><td colSpan={14} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
                             ) : data.map(r => (
                                 <tr key={r.id} className="border-b hover:bg-gray-50 transition-colors">
                                     <td className="py-3 px-4 font-mono">{r.cedula}</td>
                                     <td className="py-3 px-4 font-medium">{r.nombre}</td>
                                     <td className="py-3 px-4">{r.nivel || '-'}</td>
+                                    <td className="py-3 px-4">{r.turno || '-'}</td>
+                                    <td className="py-3 px-4">
+                                        {r.catequistaAnterior ? (
+                                            <span className="text-gray-600">{r.catequistaAnterior}</span>
+                                        ) : (
+                                            <span className="text-gray-300">-</span>
+                                        )}
+                                    </td>
                                     <td className="py-3 px-4">{r.edad ?? '-'}</td>
+                                    <td className="py-3 px-4">
+                                        {r.representanteNombre ? (
+                                            <span className="text-gray-700">{r.representanteNombre}</span>
+                                        ) : (
+                                            <span className="text-gray-300">-</span>
+                                        )}
+                                    </td>
+                                    <td className="py-3 px-4">{r.representanteTelefono || '-'}</td>
+                                    <td className="py-3 px-4 max-w-[180px]">
+                                        {r.representanteDireccion ? (
+                                            <span title={r.representanteDireccion} className="block truncate text-gray-600">{r.representanteDireccion}</span>
+                                        ) : (
+                                            <span className="text-gray-300">-</span>
+                                        )}
+                                    </td>
                                     <td className="py-3 px-4">
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                             r.estadoId === 2 ? 'bg-green-100 text-green-700' :
